@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Covers the app's private storage (getApplicationDocumentsDirectory maps
+     to getDir("app_flutter") which lives outside files-path, hence root). -->
+<paths>
+    <root-path name="app_storage" path="." />
+</paths>

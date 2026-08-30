@@ -1,0 +1,8 @@
+flutter_native_splash:
+  color: "#F5F7F8"
+  image: "asset/Gemini_Generated_Image_jw1w8cjw1w8cjw1w.jpeg"
+  android: true
+  ios: true
+  web: false
+  android_gravity: center
+  ios_content_mode: center

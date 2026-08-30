@@ -1,0 +1,618 @@
+{
+  "@@locale": "ar",
+  "tagline": "ملاحظاتك.. في أمان",
+  "forgotPin": "نسيت الرمز؟",
+  "resetAppTitle": "إعادة تعيين التطبيق",
+  "resetAppWarning": "سيتم مسح جميع الملاحظات والملفات وإعدادات القفل نهائيًا. لا يمكن التراجع عن هذه الخطوة.",
+  "resetAppConfirm": "مسح وإعادة التعيين",
+  "cancel": "إلغاء",
+  "save": "حفظ",
+  "delete": "حذف",
+  "edit": "تعديل",
+  "undoAction": "تراجع",
+  "continueLabel": "متابعة",
+  "homeNewNote": "ملاحظة جديدة",
+  "homeSearchHint": "ابحث في ملاحظاتك...",
+  "homeClearSearch": "مسح البحث",
+  "homeNotesCount": "{count, plural, =0{ابدأ بكتابة أول ملاحظة} =1{ملاحظة واحدة} =2{ملاحظتان} few{{count} ملاحظات} many{{count} ملاحظة} other{{count} ملاحظة}}",
+  "@homeNotesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "themeLightTooltip": "الوضع النهاري",
+  "themeDarkTooltip": "الوضع الليلي",
+  "sortTooltip": "ترتيب",
+  "sortNewestFirst": "الأحدث أولًا",
+  "sortOldestFirst": "الأقدم أولًا",
+  "sortByColor": "حسب اللون",
+  "selectionClear": "إلغاء التحديد",
+  "selectionCount": "تم تحديد {selected} من {total}",
+  "@selectionCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "selectionAll": "تحديد الكل",
+  "selectionNone": "إلغاء تحديد الكل",
+  "actionColor": "اللون",
+  "actionPin": "تثبيت",
+  "actionUnpin": "إلغاء التثبيت",
+  "colorSheetTitle": "{count, plural, =1{لون ملاحظة واحدة} few{لون {count} ملاحظات} many{لون {count} ملاحظات} other{لون {count} ملاحظة}}",
+  "@colorSheetTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "applyColor": "تطبيق اللون",
+  "deleteNoteTitle": "حذف الملاحظة؟",
+  "deleteNoteTrashMessage": "تُنقل الملاحظة إلى المحذوفات ويمكن استعادتها خلال 30 يومًا.",
+  "deleteManyTitle": "حذف الملاحظات؟",
+  "deleteManyMessage": "{count, plural, =1{سيتم نقل ملاحظة واحدة إلى المحذوفات ويمكن استعادتها.} few{سيتم نقل {count} ملاحظات إلى المحذوفات ويمكن استعادتها.} many{سيتم نقل {count} ملاحظة إلى المحذوفات ويمكن استعادتها.} other{سيتم نقل {count} ملاحظة إلى المحذوفات ويمكن استعادتها.}}",
+  "@deleteManyMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "movedToTrashOne": "تم نقل الملاحظة إلى المحذوفات",
+  "movedToTrashCount": "{count, plural, =1{تم نقل الملاحظة إلى المحذوفات} few{تم نقل {count} ملاحظات إلى المحذوفات} many{تم نقل {count} ملاحظة إلى المحذوفات} other{تم نقل {count} ملاحظة إلى المحذوفات}}",
+  "@movedToTrashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noResults": "لا توجد نتائج",
+  "tryOtherSearch": "جرّب كلمة بحث أخرى",
+  "emptyNotes": "لا توجد ملاحظات بعد",
+  "emptyNotesHint": "اضغط زر \"ملاحظة جديدة\" للبدء",
+  "lockedNote": "ملاحظة محمية",
+  "untitled": "بدون عنوان",
+  "editorEditTitle": "تعديل ملاحظة",
+  "editorNewTitle": "ملاحظة جديدة",
+  "saving": "جارٍ الحفظ...",
+  "editorSaveButton": "حفظ الملاحظة",
+  "editorTitleHint": "عنوان الملاحظة...",
+  "editorContentHint": "اكتب تفاصيل ملاحظتك هنا...",
+  "imagesSection": "الصور",
+  "addImageSheetTitle": "إضافة مرفق للملاحظة",
+  "cameraOption": "التقاط صورة بالكاميرا",
+  "galleryOption": "اختيار من المعرض",
+  "imagePickFailed": "تعذر الحصول على الصورة",
+  "titleRequired": "اكتب عنوانًا للملاحظة أولًا",
+  "reminderSection": "التذكير",
+  "noReminder": "بدون تذكير",
+  "editReminder": "تحديد وقت التذكير",
+  "clearReminder": "إزالة التذكير",
+  "pastReminderToast": "اختر وقتًا في المستقبل",
+  "drawOption": "رسم",
+  "drawTitle": "رسم جديد",
+  "voiceNoteOption": "تسجيل صوتي",
+  "voiceNoteRecHint": "اضغط على الميكروفون لبدء التسجيل",
+  "micDeniedToast": "لم يتم منح إذن المايكروفون",
+  "onbTitle1": "ملاحظاتك، منسّقة وجميلة",
+  "onbBody1": "اكتب ملاحظاتك بتنسيق Markdown، ونظّمها بالوسوم والألوان.",
+  "onbTitle2": "كل شيء في مكانه",
+  "onbBody2": "تذكيرات، مرفقات صور وأصوات وملفات، بحث سريع، واستقبال المشاركة من أي تطبيق.",
+  "onbTitle3": "خصوصيتك أولاً",
+  "onbBody3": "اقفل التطبيق أو الملاحظات المنفردة بكلمة سر — وبياناتك تبقى على جهازك فقط.",
+  "onbNext": "التالي",
+  "onbStart": "ابدأ الآن",
+  "onbSkip": "تخطي",
+        "noteSaved": "تم حفظ الملاحظة",
+  "noteSaveFailed": "تعذر حفظ الملاحظة، حاول مرة أخرى",
+  "unsavedChangesTitle": "تغييرات غير محفوظة",
+  "unsavedChangesMessage": "هل تريد حفظ التغييرات أم تجاهلها؟",
+  "discard": "تجاهل",
+  "relockBeforeEditHint": "أعد فتح الملاحظة بكلمة السر قبل تعديلها",
+  "protectMenuTooltip": "حماية الملاحظة",
+  "setPasswordItem": "تعيين كلمة سر",
+  "removePasswordOnSave": "إزالة كلمة السر عند الحفظ",
+  "noteProtectedItem": "الملاحظة محمية",
+  "secureDialogTitle": "تأمين الملاحظة",
+  "secureDialogMessage": "ستُشفَّر محتويات الملاحظة ولا يمكن عرضها إلا بكلمة السر.",
+  "secureConfirm": "تأمين",
+  "willSaveUnprotected": "ستُحفظ الملاحظة بدون حماية عند الحفظ",
+  "viewerTitle": "الملاحظة",
+  "shareTooltip": "مشاركة",
+  "noAppToOpenFile": "مفيش تطبيق يقدر يفتح نوع الملف ده",
+  "unlockTooltip": "فتح الملاحظة",
+  "wrongPasswordToast": "كلمة السر غير صحيحة",
+  "unlockDialogMessage": "أدخل كلمة السر لفتح الملاحظة",
+  "unlockConfirm": "فتح",
+  "passwordHint": "كلمة السر",
+  "confirmPasswordHint": "تأكيد كلمة السر",
+  "unlockPanelTitle": "هذه الملاحظة محمية بكلمة سر",
+  "unlockPanelButton": "فتح الملاحظة",
+  "manageProtection": "إدارة الحماية",
+  "protectSheetTitle": "حماية الملاحظة",
+  "setPasswordSubtitle": "حماية عنوان وتفاصيل الملاحظة",
+  "changePassword": "تغيير كلمة السر",
+  "newPasswordMessage": "أدخل كلمة السر الجديدة",
+  "updateConfirm": "تحديث",
+  "passwordUpdatedToast": "تم تحديث كلمة السر",
+  "removePassword": "إزالة كلمة السر",
+  "removePasswordTitle": "إزالة كلمة السر؟",
+  "removePasswordMessage": "ستُحفظ الملاحظة بدون حماية ويمكن لأي شخص فتحها.",
+  "removeConfirm": "إزالة",
+  "protectionRemovedToast": "تمت إزالة الحماية",
+  "securedToast": "تم تأمين الملاحظة",
+  "noDetails": "لا توجد تفاصيل",
+  "createdAtLabel": "أُنشئت",
+  "lastModifiedLabel": "آخر تعديل",
+  "imagesCountLabel": "الصور ({count})",
+  "@imagesCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filesCountLabel": "الملفات ({count})",
+  "@filesCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "enterCurrentPasswordMessage": "أدخل كلمة السر الحالية للمتابعة",
+  "enterCurrentToRemoveMessage": "أدخل كلمة السر الحالية لإزالتها",
+  "setPasswordDialogTitle": "تعيين كلمة سر للملاحظة",
+  "setPasswordDialogMessage": "ستُشفَّر محتويات الملاحظة ولا يمكن عرضها إلا بكلمة السر.",
+  "imageOfTotal": "صورة {index} من {total}",
+  "@imageOfTotal": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeTitle": "مرحبًا بك في {appName}",
+  "@welcomeTitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseLockSubtitle": "اختر طريقة قفل التطبيق لحماية ملاحظاتك",
+  "methodBiometric": "بصمة الإصبع أو الوجه",
+  "methodBiometricSubtitle": "افتح ببصمتك أو وجهك المسجل على الجهاز",
+  "methodDevice": "النمط أو الرقم السري للجهاز",
+  "methodDeviceSubtitle": "افتح بالنمط أو الباسورد الذي قفلت به جهازك",
+  "methodPin": "رقم سري للتطبيق",
+  "methodPinSubtitle": "افتح برقم سري خاص بـ {appName}",
+  "lockOptionDeviceTitle": "أمان الجهاز",
+  "lockOptionDeviceSubtitle": "استخدم البصمة أو النمط أو الرقم السري الموجود على جهازك",
+  "lockOptionPasswordTitle": "باسورد للتطبيق",
+  "lockOptionPasswordSubtitle": "أنشئ رقم سري خاص بالتطبيق مع خيار البصمة",
+  "lockOptionSkip": "تخطي مؤقتًا",
+  "deviceSetupTitle": "تحقق من هويتك",
+  "deviceSetupBody": "استخدم بصمة جهازك أو النمط أو الرقم السري لفتح التطبيق",
+  "biometricOfferTitle": "إضافة فتح بالبصمة؟",
+  "biometricOfferBody": "جهازك يدعم فتح بالبصمة أو الوجه. فعّله للوصول أسرع إلى {appName}؟",
+  "biometricBackupNotice": "يجب إنشاء رقم سري احتياطي في حالة عدم توفر البصمة",
+  "enableBiometric": "تفعيل البصمة",
+  "skipBiometric": "تخطي، استخدم الرقم السري فقط",
+  "backupPinBody": "أنشئ رقم سري احتياطي في حالة عدم توفر البصمة",
+  "@methodPinSubtitle": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "methodNone": "بدون قفل",
+  "pinCreateTitle": "إنشاء رقم سري",
+  "pinBackupTitle": "إنشاء رقم سري احتياطي",
+  "pinConfirmTitle": "تأكيد الرقم السري",
+  "pinReenterPrompt": "أعد إدخال الرقم السري للتأكيد",
+  "pinEnterLength": "أدخل رقمًا سريًا مكونًا من {length} أرقام",
+  "@pinEnterLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "pinMismatchError": "الرقمان غير متطابقين، حاول مرة أخرى",
+  "enterAppPin": "أدخل الرقم السري للتطبيق",
+  "wrongPin": "الرقم السري غير صحيح",
+  "bioCheckingSensor": "جارٍ فحص مستشعر البصمة...",
+  "bioEnrollTitle": "سجّل بصمتك في الجهاز أولًا",
+  "bioPrivacyNote": "البصمة ما بتتخزنش في {appName} — بتفضل محفوظة في الجهاز نفسه بشكل آمن، والتطبيق بيستخدم مستشعر الجهاز بس.",
+  "@bioPrivacyNote": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "bioStep1": "افتح إعدادات الجهاز من زر \"فتح إعدادات البصمة\"",
+  "bioStep2": "دخّل الإعدادات → الأمان → بصمة الإصبع",
+  "bioStep3": "اتبع الخطوات وسجّل بصمتك",
+  "bioStep4": "ارجع للتطبيق واضغط \"تم — سجلت بصمتي\"",
+  "bioNotYetNotice": "لسه مش متسجل — افتح إعدادات البصمة وسجّل بصمتك الأول",
+  "bioOpenSettings": "فتح إعدادات البصمة",
+  "bioDoneEnrolled": "تم — سجلت بصمتي",
+  "bioReadyTitle": "مستشعر البصمة جاهز",
+  "bioReadyBody": "جهازك فيه بصمة متسجلة. من دلوقتي أي ما تفتح {appName} هيطلب بصمتك من مستشعر الجهاز، ومتفتحش غير لما تطابق.",
+  "@bioReadyBody": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "bioTryNow": "جرّب البصمة الآن",
+  "bioNotRecognizedLong": "لم يتم التعرف على بصمتك، حاول مرة أخرى",
+  "bioUnavailableNow": "الجهاز لا يستطيع تشغيل مستشعر البصمة الآن",
+  "bioUnsupportedTitle": "جهازك لا يدعم البصمة",
+  "bioUnsupportedBody": "مستشعر البصمة غير متاح على هذا الجهاز. تقدر تختار طريقة قفل تانية.",
+  "chooseAnotherMethod": "اختيار طريقة أخرى",
+  "cannotOpenSettings": "لا يمكن فتح إعدادات الجهاز هنا",
+  "verifying": "جارٍ التحقق...",
+  "placeFinger": "ضع بصمة إصبعك",
+  "deviceCredentialPrimaryHint": "أو استخدم النمط أو الرقم السري الذي قفلت به جهازك",
+  "deviceCredentialFallbackHint": "أو التحقق بالنمط أو الرقم السري للجهاز",
+  "notRecognizedRetry": "لم يتم التعرف، حاول مرة أخرى",
+  "retryButton": "إعادة المحاولة",
+  "tryNowButton": "التحقق الآن",
+  "useDeviceCredential": "استخدام النمط أو الرقم السري",
+  "useBackupPin": "استخدام الرقم السري الاحتياطي",
+  "biometricBackupHint": "استخدم بصمتك للفتح، أو استخدم الرقم السري الاحتياطي",
+  "settingsTitle": "الإعدادات",
+  "sectionSecurity": "القفل والتأمين",
+  "lockMethodTile": "طريقة قفل التطبيق",
+  "lockMethodUnset": "غير محددة",
+  "changePin": "تغيير الرقم السري",
+  "sectionAppearance": "المظهر",
+  "themeSystem": "حسب إعداد الجهاز",
+  "themeLight": "الوضع النهاري",
+  "themeDark": "الوضع الليلي",
+  "sectionBackup": "النسخ الاحتياطي",
+  "exportNotes": "تصدير الملاحظات",
+  "exportSubtitle": "ملف JSON يشمل المحذوفة، بدون الصور",
+  "importBackup": "استيراد نسخة احتياطية",
+  "importSubtitle": "تُضاف الملاحظات إلى الموجود حاليًا",
+  "sectionAbout": "حول التطبيق",
+  "disableLockTitle": "إلغاء قفل التطبيق؟",
+  "disableLockMessage": "سيتمكن أي يفتح الجهاز من قراءة ملاحظاتك مباشرة.",
+  "disableLockConfirm": "إلغاء القفل",
+  "noNotesToExport": "لا توجد ملاحظات لتصديرها",
+  "exportFileTooltip": "تصدير كملف نصي",
+  "exportedWithLine": "مُصدَّرة من {app}",
+  "@exportedWithLine": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "exportFailed": "تعذر إنشاء ملف النسخة الاحتياطية",
+  "importConfirmTitle": "استيراد النسخة؟",
+  "importConfirmMessage": "سيتم إضافة {count} ملاحظة إلى ملاحظاتك الحالية. لا تشمل النسخة الصور المرفقة.",
+  "@importConfirmMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importConfirm": "استيراد",
+  "importedToast": "تم استيراد {count} ملاحظة",
+  "@importedToast": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "invalidBackupFile": "الملف ليس نسخة احتياطية صالحة من Notey",
+  "readFileFailed": "تعذر قراءة الملف",
+  "gridViewTooltip": "عرض شبكي",
+  "listViewTooltip": "عرض قائمة",
+  "readerFontSize": "حجم خط القراءة",
+  "trashTitle": "المحذوفات",
+  "emptyTrashTooltip": "تفريغ السلة",
+  "emptyTrashTitle": "تفريغ السلة؟",
+  "emptyTrashMessage": "سيُحذف نهائيًا {count} ملاحظة مع صورها.",
+  "@emptyTrashMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "emptyTrashConfirm": "تفريغ",
+  "trashEmptyTitle": "السلة فارغة",
+  "trashEmptyBody": "الملاحظات المحذوفة تظهر هنا لمدة 30 يومًا قبل حذفها نهائيًا",
+  "restoreTooltip": "استعادة",
+  "purgeForeverTooltip": "حذف نهائي",
+  "purgeForeverTitle": "حذف نهائي؟",
+  "purgeForeverMessage": "لا يمكن التراجع عن هذه الخطوة.",
+  "purgeForeverConfirm": "حذف نهائيًا",
+  "deletedToday": "اليوم",
+  "deletedYesterday": "أمس",
+  "deletedDaysAgo": "قبل {days} يوم",
+  "@deletedDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoredToast": "تمت استعادة \"{title}\"",
+  "@restoredToast": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordMinLengthError": "كلمة السر يجب ألا تقل عن 6 أحرف",
+  "passwordsNoMatch": "كلمتا السر غير متطابقتين",
+  "biometricPrompt": "افتح تطبيق Notey",
+  "timeAm": "ص",
+  "timePm": "م",
+  "timeNow": "الآن",
+  "minutesAgo": "{count, plural, =1{قبل دقيقة واحدة} =2{قبل دقيقتين} few{قبل {count} دقائق} many{قبل {count} دقيقة} other{قبل {count} دقيقة}}",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{count, plural, =1{قبل ساعة واحدة} =2{قبل ساعتين} few{قبل {count} ساعات} many{قبل {count} ساعة} other{قبل {count} ساعة}}",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{count, plural, =1{قبل يوم واحد} =2{قبل يومين} few{قبل {count} أيام} many{قبل {count} يوم} other{قبل {count} يوم}}",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "lastWeekOn": "الأسبوع الماضي، {weekday}",
+  "@lastWeekOn": {
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "dayMonth": "{day} {month}",
+  "@dayMonth": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "dayMonthYear": "{day} {month} {year}",
+  "@dayMonthYear": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "fullDate": "{day} {month} {year} - {clock}",
+  "@fullDate": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      },
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
+  "fileFromDeviceOption": "اختيار ملف من الجهاز",
+  "attachmentPickFailed": "تعذر إضافة الملف",
+  "tagsSection": "الوسوم",
+  "addTagHint": "أضف وسمًا...",
+  "formatBold": "عريض",
+  "formatItalic": "مائل",
+  "formatHeading": "عنوان",
+  "formatBullet": "قائمة نقطية",
+  "formatCheckbox": "مهمة",
+  "formatCode": "كود",
+  "addTag": "إضافة وسم",
+  "noNotesWithTag": "لا توجد ملاحظات بهذا الوسم",
+  "allTags": "الكل",
+  "attachmentsSection": "المرفقات",
+  "addAttachment": "إضافة مرفق",
+  "editHistoryTitle": "سجل التعديلات",
+  "noEditHistory": "لا توجد تعديلات سابقة",
+  "currentVersion": "الحالية",
+  "reminderScheduled": "تم جدولة التذكير",
+  "reminderPermissionNeeded": "إشعارات مطلوبة للتذكير. يرجى تفعيلها من الإعدادات.",
+  "reminderFailed": "تعذر ضبط التذكير. يرجى التحقق من إعدادات الإشعارات.",
+  "pinLocked": "محاولات كثيرة جداً. حاول مرة أخرى بعد",
+  "seconds": "ثوانٍ",
+  "language": "اللغة",
+  "langArabic": "العربية",
+  "langEnglish": "English",
+  "textPlaceholder": "نص",
+  "semNewNote": "ملاحظة جديدة",
+  "semNewNoteHint": "إنشاء ملاحظة جديدة",
+  "semBulkColor": "تغيير اللون",
+  "semBulkPin": "تثبيت",
+  "semBulkUnpin": "إلغاء التثبيت",
+  "semBulkDelete": "حذف المحدد",
+  "semSelectColor": "اختر اللون {color}",
+  "semRemoveImage": "إزالة الصورة",
+  "semAddAttachment": "إضافة مرفق",
+  "semAddPhoto": "إضافة صورة",
+  "semAddFile": "إضافة ملف",
+  "semOpenFile": "فتح الملف",
+  "semRemoveFile": "إزالة الملف",
+  "semSaveNote": "حفظ الملاحظة",
+  "semSaveNoteHint": "حفظ الملاحظة الحالية",
+  "semCloseSheet": "إغلاق",
+  "semOpenImageViewer": "عرض الصورة",
+  "semChecklistItem": "عنصر قائمة",
+  "semChecklistHint": "انقر مرتين للتبديل",
+  "semChecked": "محدد",
+  "semUnchecked": "غير محدد",
+  "semThemeSystem": "سمة النظام",
+  "semThemeLight": "سمة الفاتح",
+  "semThemeDark": "سمة الداكن",
+  "semThemeHint": "اضغط للاختيار",
+  "semReaderFont": "حجم خط القارئ",
+  "semPickFromCamera": "التقط صورة بالكاميرا",
+  "semPickFromGallery": "اختر صورة من المعرض",
+  "semPickFile": "اختر ملف من الجهاز",
+  "semRecordVoice": "تسجيل ملاحظة صوتية",
+  "semDrawSketch": "رسم مخطط",
+  "redoAction": "إعادة",
+  "eraser": "ممحاة",
+  "trashRetention": "مدة الاحتفاظ بالمحذوفات",
+  "trashRetentionDays": "{days} يوم",
+  "trashRetentionLabel": "تُحفظ الملاحظات المحذوفة لمدة {days} يومًا",
+  "clearAllData": "مسح جميع البيانات",
+  "clearAllDataSubtitle": "حذف جميع الملاحظات والملفات والإعدادات نهائيًا",
+  "clearAllDataTitle": "مسح جميع البيانات؟",
+  "clearAllDataMessage": "سيتم حذف جميع الملاحظات والملفات وإعدادات القفل نهائيًا. أدخل رقمك السري أو كلمة السر للتأكيد.",
+  "clearAllDataConfirm": "مسح كل شيء",
+  "enterPasswordToConfirm": "أدخل كلمة السر للتأكيد",
+  "dataClearedToast": "تم مسح جميع البيانات",
+  "trashRetentionDays": "{days} يوم",
+  "@trashRetentionDays": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "trashRetentionLabel": "تُحفظ الملاحظات المحذوفة لمدة {days} يومًا",
+  "@trashRetentionLabel": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "clearAllDataMessage": "سيتم حذف جميع الملاحظات والملفات وإعدادات القفل نهائيًا. أدخل رقمك السري أو كلمة السر للتأكيد.",
+  "restoreHistoryVersion": "استعادة هذا الإصدار",
+  "historyRestoredToast": "تمت استعادة الملاحظة لهذا الإصدار",
+  "exportPdfTooltip": "تصدير كـ PDF",
+  "exportMarkdownTooltip": "تصدير كـ Markdown",
+  "exportPdfFailed": "تعذر إنشاء ملف PDF",
+  "exportMarkdownFailed": "تعذر إنشاء ملف Markdown",
+  "folderSection": "المجلد",
+  "folderHint": "تعيين لمجلد...",
+  "allFolders": "كل المجلدات",
+  "sortCustom": "ترتيب يدوي",
+  "searchInNote": "بحث في الملاحظة",
+  "searchNoMatches": "لا توجد نتائج",
+  "searchMatchOf": "{current} من {total}",
+  "@searchMatchOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "searchHistoryTitle": "عمليات البحث الأخيرة",
+  "searchHistoryClear": "مسح الكل",
+  "searchResultsCount": "{count, plural, =0{لا توجد نتائج} =1{نتيجة واحدة} =2{نتيجتان} few{{count} نتائج} many{{count} نتيجة} other{{count} نتيجة}}",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "vaultTitle": "الخزنة",
+  "vaultEmptyTitle": "لا يوجد شيء هنا بعد",
+  "vaultEmptyHint": "احفظ كلمات المرور والبطاقات والحسابات والملاحظات السرية في الخزنة المشفرة",
+  "vaultAdd": "إضافة",
+  "vaultAddLogin": "كلمة مرور",
+  "vaultAddCard": "بطاقة ائتمان",
+  "vaultAddBank": "حساب بنكي",
+  "vaultAddSecureNote": "ملاحظة سرية",
+  "vaultFilterAll": "الكل",
+  "vaultFilterPasswords": "كلمات المرور",
+  "vaultFilterBanking": "بنوك",
+  "vaultFilterDocuments": "مستندات",
+  "vaultFilterAudio": "صوتيات",
+  "vaultFilterCanvas": "رسومات",
+  "vaultTitleLabel": "العنوان",
+  "vaultTitleHint": "مثال: بريد جيميل",
+  "vaultFieldUsername": "اسم المستخدم",
+  "vaultFieldPassword": "كلمة المرور",
+  "vaultFieldCardHolder": "اسم حامل البطاقة",
+  "vaultFieldCardNumber": "رقم البطاقة",
+  "vaultFieldExpiry": "تاريخ الانتهاء (MM/YY)",
+  "vaultFieldCvv": "رمز الأمان (CVV)",
+  "vaultFieldCardPin": "الرقم السري للبطاقة",
+  "vaultFieldBankName": "اسم البنك",
+  "vaultFieldIban": "رقم الآيبان",
+  "vaultFieldAccountName": "اسم صاحب الحساب",
+  "vaultFieldSwift": "رمز السويفت",
+  "vaultNotes": "ملاحظات",
+  "vaultNotesHint": "إضافية (اختياري)",
+  "vaultShow": "إظهار",
+  "vaultHide": "إخفاء",
+  "vaultCopy": "نسخ",
+  "vaultCopiedToast": "تم النسخ",
+  "vaultShareLabel": "مشاركة",
+  "vaultDeleteTitle": "حذف العنصر؟",
+  "vaultDeleteMessage": "لن يمكن التراجع عن حذف هذا العنصر.",
+  "vaultGeneratePassword": "توليد كلمة مرور",
+  "vaultAttachmentAdd": "إضافة مرفق",
+  "vaultAttachmentHint": "ملف مشفر (مستند، صورة، صوت…)",
+  "vaultOpenAttachment": "فتح",
+  "vaultMediaLabel": "نوع الملف",
+  "vaultMediaAuto": "تلقائي",
+  "vaultMediaDocument": "مستند",
+  "vaultMediaAudio": "صوتي",
+  "vaultMediaDrawing": "رسم",
+  "vaultScreenProtected": "الحماية من اللقطات مفعّلة",
+  "vaultErrorLoading": "تعذر تحميل الخزنة",
+  "documentPreviewShare": "مشاركة",
+  "documentOpenFailed": "تعذر فتح الملف",
+  "documentHandedToExternal": "تم فتح الملف في تطبيق خارجي",
+  "documentNoAppHint": "لا يوجد تطبيق مثبت لفتح هذا النوع من الملفات",
+  "documentOpenExternal": "فتح في تطبيق خارجي",
+  "documentPlaybackFailed": "تعذر تشغيل هذا الملف الصوتي",
+  "audioPlay": "تشغيل",
+  "audioPause": "إيقاف",
+  "audioUnavailable": "تعذر تشغيل الصوت",
+  "reRecord": "إعادة التسجيل",
+  "attach": "إرفاق",
+  "replayPreview": "معاينة"
+}
