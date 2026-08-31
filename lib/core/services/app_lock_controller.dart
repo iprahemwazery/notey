@@ -22,6 +22,11 @@ class AppLockController extends ChangeNotifier {
   AppLockMethod? _method;
   bool _initialized = false;
 
+  /// Process-local copy of the app PIN hash. The OS-keychain read is only
+  /// paid once per session — every later unlock verifies against this cache,
+  /// cutting one secure-storage round-trip out of the hot unlock path.
+  String? _pinHashCache;
+
   bool get initialized => _initialized;
   AppLockMethod? get method => _method;
 
@@ -50,6 +55,9 @@ class AppLockController extends ChangeNotifier {
   }
 
   Future<void> setPin(String pin) async {
+    // Invalidate the cache first so a re-configured PIN never verifies
+    // against a stale hash.
+    _pinHashCache = null;
     await _secure.write(key: _pinKey, value: await PinHasher.create(pin));
   }
 
@@ -58,17 +66,30 @@ class AppLockController extends ChangeNotifier {
     // Migration: read a legacy hash from SharedPreferences once, then move it.
     stored ??= _prefs?.getString(_pinKey);
     if (stored == null) return false;
+    // Whatever the source, mirror it into the cache so the next unlock skips
+    // the secure-storage round trip entirely.
+    _pinHashCache = stored;
     final ok = await PinHasher.verify(pin, stored);
     if (ok && stored == (_prefs?.getString(_pinKey))) {
-      await _secure.write(key: _pinKey, value: stored);
-      await _prefs?.remove(_pinKey);
+      // Migration write must never fail the (already verified) PIN on real
+      // secure storage hiccups — the match stands even if the move is retried.
+      try {
+        await _secure.write(key: _pinKey, value: stored);
+        await _prefs?.remove(_pinKey);
+      } on Exception catch (e) {
+        debugPrint('verifyPin migration write failed (non-fatal): $e');
+      }
     }
     return ok;
   }
 
   Future<String?> _readPinHash() async {
+    final cached = _pinHashCache;
+    if (cached != null) return cached;
     try {
-      return await _secure.read(key: _pinKey);
+      final value = await _secure.read(key: _pinKey);
+      _pinHashCache = value;
+      return value;
     } on Exception {
       return null;
     }
@@ -77,6 +98,7 @@ class AppLockController extends ChangeNotifier {
   /// For test convenience / reset.
   Future<void> reset() async {
     _method = null;
+    _pinHashCache = null;
     await _prefs?.remove(_methodKey);
     await _prefs?.remove(_pinKey);
     try {

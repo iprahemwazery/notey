@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:notey/core/services/ui_prefs.dart';
+import 'package:notey/core/theme/theme_extensions.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
 
 /// A tile that lets the user change the reader (viewer) font size.
@@ -26,12 +27,18 @@ class _ReaderFontTileState extends State<ReaderFontTile> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final textColor = context.getAdaptiveTextColor(context);
     return ListTile(
-      leading: const Icon(Icons.format_size_rounded),
-      title: Text(l10n.readerFontSize),
+      leading: Icon(Icons.format_size_rounded, color: textColor),
+      title: Text(
+        l10n.readerFontSize,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(color: textColor),
+      ),
       subtitle: Row(
         children: <Widget>[
-          Icon(Icons.text_decrease_rounded, size: 18.w),
+          Icon(Icons.text_decrease_rounded, size: 18.w, color: textColor),
           Expanded(
             child: Semantics(
               label: l10n.semReaderFont,
@@ -49,7 +56,7 @@ class _ReaderFontTileState extends State<ReaderFontTile> {
               ),
             ),
           ),
-          Icon(Icons.text_increase_rounded, size: 22.w),
+          Icon(Icons.text_increase_rounded, size: 22.w, color: textColor),
         ],
       ),
     );

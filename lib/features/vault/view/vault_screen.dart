@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:notey/core/services/haptics.dart';
 
+import 'package:notey/core/theme/theme_extensions.dart';
 import 'package:notey/data/repositories/secure_vault_repository.dart';
 
 import 'package:notey/l10n/generated/app_localizations.dart';
@@ -176,17 +177,6 @@ class _VaultView extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 8.w),
-                      IconButton.filledTonal(
-                        onPressed: () => _pickAddCategory(context),
-                        tooltip: l10n.vaultAdd,
-                        style: IconButton.styleFrom(
-                          backgroundColor: scheme.primary.withValues(
-                            alpha: .12,
-                          ),
-                          foregroundColor: scheme.primary,
-                        ),
-                        icon: const Icon(Icons.add_rounded),
-                      ),
                     ],
                   ),
                 ),
@@ -264,16 +254,13 @@ class _VaultView extends StatelessWidget {
   ) async {
     await Haptics.tap();
     if (!context.mounted) return;
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    // The editor's _save already calls cubit.upsert() which optimistically
+    // updates the in-memory list — no need to re-decrypt the full vault.
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (_) => VaultEntryEditorScreen(category: category),
       ),
     );
-    // Reload only when the editor actually saved something; cancel/back stays
-    // untouched so the vault doesn't re-decrypt the whole set on every visit.
-    if (changed == true && context.mounted) {
-      context.read<VaultCubit>().load(silent: true);
-    }
   }
 
   Future<void> _pickAddCategory(BuildContext context) async {
@@ -325,16 +312,13 @@ class _VaultView extends StatelessWidget {
       ),
     );
     if (category == null || !context.mounted) return;
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    // The editor's _save already calls cubit.upsert() which optimistically
+    // updates the in-memory list — no need to re-decrypt the full vault.
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (_) => VaultEntryEditorScreen(category: category),
       ),
     );
-    // Only the success path (a real add) needs a refresh; closing the sheet
-    // with no change skips the decrypt work entirely.
-    if (changed == true && context.mounted) {
-      context.read<VaultCubit>().load(silent: true);
-    }
   }
 }
 
@@ -437,6 +421,8 @@ class _ChipsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final textColor = context.getAdaptiveTextColor(context);
+    final mutedColor = context.getAdaptiveMutedTextColor(context);
     return SizedBox(
       height: 56.h,
       child: ListView.separated(
@@ -446,11 +432,30 @@ class _ChipsRow extends StatelessWidget {
         separatorBuilder: (_, _) => SizedBox(width: 8.w),
         itemBuilder: (context, index) {
           final f = VaultMeta.filters[index];
+          final selected = f == filter;
           return ChoiceChip(
-            selected: f == filter,
+            selected: selected,
             onSelected: (_) => onFilter(f),
-            avatar: Icon(VaultMeta.iconForFilter(f), size: 18.w),
+            avatar: Icon(
+              VaultMeta.iconForFilter(f),
+              size: 18.w,
+              color: selected ? textColor : mutedColor,
+            ),
             label: Text(VaultMeta.labelForFilter(f, l10n)),
+            selectedColor: Theme.of(context).colorScheme.secondaryContainer,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? textColor : mutedColor,
+            ),
+            side: BorderSide(
+              color: selected
+                  ? Theme.of(context).colorScheme.secondaryContainer
+                  : Theme.of(context).colorScheme.outlineVariant.withValues(
+                      alpha: .6,
+                    ),
+            ),
+            showCheckmark: false,
           );
         },
       ),
@@ -482,17 +487,14 @@ class _ListReadyState extends State<_ListReady> {
           return _VaultCard(
             entry: entry,
             onTap: () async {
-              // Detail pops `true` only when the entry was deleted; any other
-              // return (reopen, share, back) leaves the in-memory list alone so
-              // we never re-decrypt the whole vault just for a peek.
-              final closed = await Navigator.of(context).push<bool>(
+              // Detail pops `true` only when the entry was deleted; the detail
+              // screen already calls applyRemove/applyUpsert on the cubit, so
+              // the in-memory list is always up to date — no re-decrypt needed.
+              await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
                   builder: (_) => VaultEntryDetailScreen(entry: entry),
                 ),
               );
-              if (closed == true && context.mounted) {
-                context.read<VaultCubit>().load(silent: true);
-              }
             },
           );
         },

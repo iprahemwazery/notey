@@ -149,6 +149,7 @@
   "removeConfirm": "إزالة",
   "protectionRemovedToast": "تمت إزالة الحماية",
   "securedToast": "تم تأمين الملاحظة",
+  "protectionFailedToast": "تعذّر حماية الملاحظة، حاول مجددًا",
   "noDetails": "لا توجد تفاصيل",
   "createdAtLabel": "أُنشئت",
   "lastModifiedLabel": "آخر تعديل",

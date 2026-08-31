@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:notey/core/services/backup_service.dart';
+import 'package:notey/core/theme/theme_extensions.dart';
 import 'package:notey/data/repositories/note_repository.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
 
@@ -23,19 +24,41 @@ class _BackupSectionState extends State<BackupSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final textColor = context.getAdaptiveTextColor(context);
+    final mutedColor = context.getAdaptiveMutedTextColor(context);
     return Column(
       children: <Widget>[
         SettingsSectionLabel(text: l10n.sectionBackup),
         ListTile(
-          leading: const Icon(Icons.file_upload_outlined),
-          title: Text(l10n.exportNotes),
-          subtitle: Text(l10n.exportSubtitle),
+          leading: Icon(Icons.file_upload_outlined, color: textColor),
+          title: Text(
+            l10n.exportNotes,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: textColor),
+          ),
+          subtitle: Text(
+            l10n.exportSubtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: mutedColor),
+          ),
           onTap: _busy ? null : _exportBackup,
         ),
         ListTile(
-          leading: const Icon(Icons.file_download_outlined),
-          title: Text(l10n.importBackup),
-          subtitle: Text(l10n.importSubtitle),
+          leading: Icon(Icons.file_download_outlined, color: textColor),
+          title: Text(
+            l10n.importBackup,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: textColor),
+          ),
+          subtitle: Text(
+            l10n.importSubtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: mutedColor),
+          ),
           onTap: _busy ? null : _importBackup,
         ),
       ],

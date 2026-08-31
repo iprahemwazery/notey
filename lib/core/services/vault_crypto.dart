@@ -21,11 +21,46 @@ abstract final class VaultCrypto {
 
   static final Random _random = Random.secure();
 
+  /// Cached domain-separated sub-keys keyed by a SHA-256 of the root key.
+  /// The root key is stable per session, so re-deriving its two branches on
+  /// every encrypt/decrypt call is pure waste. Because each branch is a
+  /// SHA-256 output, the cache never holds the raw root key.
+  static List<int>? _cachedEncKey;
+  static List<int>? _cachedMacKey;
+  static String? _cacheId;
+
+  /// Returns the raw 32-byte enc+mac sub-keys for [rootKey], drawing on the
+  /// process-wide cache when the same root key is reused across calls.
+  static (Uint8List enc, Uint8List mac) _subKeys(List<int> rootKey) {
+    final digest = c.sha256.convert(
+      <int>[...utf8.encode('notey:vault:root:v1'), ...rootKey],
+    );
+    final id = base64Encode(Uint8List.fromList(digest.bytes));
+    if (_cacheId == id && _cachedEncKey != null && _cachedMacKey != null) {
+      return (Uint8List.fromList(_cachedEncKey!), Uint8List.fromList(_cachedMacKey!));
+    }
+    final branchEnc = branchKey(rootKey, 'notey:vault:enc:v1');
+    final branchMac = branchKey(rootKey, 'notey:vault:mac:v1');
+    _cachedEncKey = branchEnc;
+    _cachedMacKey = branchMac;
+    _cacheId = id;
+    return (branchEnc, branchMac);
+  }
+
+  /// Clears the derived sub-key cache. Exposed for tests and sensitive
+  /// lifecycle events (e.g. lock screen, sign out).
+  static void clearCache() {
+    _cachedEncKey = null;
+    _cachedMacKey = null;
+    _cacheId = null;
+  }
+
   /// Seals [plain] as `ivBase64.cipherTextBase64.macBase64`.
   static Future<String> encrypt(String plain, {required List<int> rootKey}) {
-    final Uint8List iv = Uint8List.fromList(_randomBytes(_random, _ivLength));
+    final iv = Uint8List.fromList(_randomBytes(_random, _ivLength));
+    final (encKey, macKey) = _subKeys(rootKey);
     return Isolate.run<String>(() {
-      final state = _DerivedKeys.from(rootKey);
+      final state = _DerivedKeys(encKey, macKey);
       final cipher = state.encrypter.encrypt(plain, iv: enc.IV(iv));
       final mac = state.mac(iv, cipher.bytes);
       return <String>[
@@ -41,8 +76,9 @@ abstract final class VaultCrypto {
     String envelope, {
     required List<int> rootKey,
   }) {
+    final (encKey, macKey) = _subKeys(rootKey);
     return Isolate.run<String>(() {
-      final state = _DerivedKeys.from(rootKey);
+      final state = _DerivedKeys(encKey, macKey);
       return _decryptWith(state, envelope);
     });
   }
@@ -57,8 +93,9 @@ abstract final class VaultCrypto {
     List<String> envelopes, {
     required List<int> rootKey,
   }) {
+    final (encKey, macKey) = _subKeys(rootKey);
     return Isolate.run<List<String?>>(() {
-      final state = _DerivedKeys.from(rootKey);
+      final state = _DerivedKeys(encKey, macKey);
       return <String?>[
         for (final envelope in envelopes) _tryDecryptWith(state, envelope),
       ];
@@ -92,19 +129,22 @@ abstract final class VaultCrypto {
   }
 }
 
+/// Derives a 32-byte domain-separated branch key via SHA-256.
+/// Top-level so both [VaultCrypto] (main-thread cache) and tests can use it.
+Uint8List branchKey(List<int> rootKey, String domain) {
+  return Uint8List.fromList(
+    c.sha256.convert(<int>[...utf8.encode(domain), ...rootKey]).bytes,
+  );
+}
+
 /// Isolate-safe view of the two domain-separated sub-keys.
 class _DerivedKeys {
-  _DerivedKeys._(this._encKey, this._macKey);
+  _DerivedKeys(Uint8List encKey, Uint8List macKey)
+    : _encKey = encKey,
+      _macKey = macKey;
 
   final Uint8List _encKey;
   final Uint8List _macKey;
-
-  static _DerivedKeys from(List<int> rootKey) {
-    return _DerivedKeys._(
-      _branchKey(rootKey, 'notey:vault:enc:v1'),
-      _branchKey(rootKey, 'notey:vault:mac:v1'),
-    );
-  }
 
   enc.Encrypter get encrypter =>
       enc.Encrypter(enc.AES(enc.Key(_encKey), mode: enc.AESMode.cbc));
@@ -113,12 +153,6 @@ class _DerivedKeys {
     final digester = c.Hmac(c.sha256, _macKey);
     return Uint8List.fromList(
       digester.convert(<int>[...iv, ...cipherText]).bytes,
-    );
-  }
-
-  static Uint8List _branchKey(List<int> rootKey, String domain) {
-    return Uint8List.fromList(
-      c.sha256.convert(<int>[...utf8.encode(domain), ...rootKey]).bytes,
     );
   }
 }

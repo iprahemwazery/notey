@@ -13,6 +13,8 @@ import 'package:notey/core/constants/app_constants.dart';
 
 import 'package:notey/core/services/haptics.dart';
 
+import 'package:notey/core/services/global_snackbar.dart';
+
 import 'package:notey/core/services/note_lock_service.dart';
 
 import 'package:notey/core/services/reminder_service.dart';
@@ -25,11 +27,7 @@ import 'package:notey/core/utils/arabic_date_time.dart';
 
 import 'package:notey/core/utils/attachment_utils.dart';
 
-import 'package:notey/core/utils/checklist.dart';
-
 import 'package:notey/core/utils/color_utils.dart';
-
-import 'package:notey/core/utils/file_icons.dart';
 
 import 'package:notey/core/utils/markdown.dart';
 
@@ -55,6 +53,12 @@ import 'package:notey/features/notes/view/note_editor_screen.dart';
 import 'document_preview_screen.dart';
 import 'image_viewer_screen.dart';
 
+import 'widgets/viewer/note_content_card_widget.dart';
+import 'widgets/viewer/unlock_panel_widget.dart';
+import 'widgets/viewer/viewer_file_tile_widget.dart';
+import 'widgets/viewer/viewer_history_tile_widget.dart';
+import 'widgets/viewer/viewer_info_row_widget.dart';
+
 class NoteViewScreen extends StatefulWidget {
   const NoteViewScreen({
     super.key,
@@ -72,8 +76,7 @@ class NoteViewScreen extends StatefulWidget {
 }
 
 class _NoteViewScreenState extends State<NoteViewScreen> {
-  late final NoteRepository _repository =
-      widget.repository ?? NoteRepository();
+  late final NoteRepository _repository = widget.repository ?? NoteRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +105,13 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<ViewerState>? _protectionSubscription;
 
+  /// True once the viewer edited or deleted the note, so popping reports a
+  /// change back to the home list which then reloads fresh colors/titles.
+  bool _changed = false;
+
+  /// Flip to true right before a programmatic pop so PopScope lets it through.
+  bool _canPop = false;
+
   @override
   void initState() {
     super.initState();
@@ -117,9 +127,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
           }
         });
       }
-      UiPrefs.readerFontScale().then(
-            cubit.setFontScale,
-          );
+      UiPrefs.readerFontScale().then(cubit.setFontScale);
     });
   }
 
@@ -157,10 +165,8 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     final locked = state.isLocked && !state.isUnlocked;
     final l10n = AppLocalizations.of(context);
 
-    final background = AppConstants
-        .noteColors[note.colorIndex % AppConstants.noteColors.length];
-    final onColor = ColorUtils.foregroundOn(background);
-    final mutedOnColor = ColorUtils.foregroundMutedOn(background);
+    final background =
+        AppConstants.noteColors[note.colorIndex % AppConstants.noteColors.length];
 
     final displayTitle = locked
         ? l10n.lockedNote
@@ -170,8 +176,15 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
         .where((a) => !AttachmentUtils.isImage(a))
         .toList();
 
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        setState(() => _canPop = true);
+        Navigator.of(context).pop(_changed);
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: Text(
           l10n.viewerTitle,
           maxLines: 1,
@@ -281,248 +294,174 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-            Hero(
-              tag: 'note-bg-${note.id}',
-              child: Material(
-                color: background,
-                borderRadius: BorderRadius.circular(22.r),
-                clipBehavior: Clip.antiAlias,
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(18.w, 20.h, 18.w, 16.h),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22.r),
-                    border: Border.all(color: onColor.withValues(alpha: .25)),
+                  NoteContentCardWidget(
+                    noteId: note.id,
+                    pinned: note.pinned,
+                    locked: locked,
+                    title: displayTitle,
+                    content: displayNote.content,
+                    background: background,
+                    highlightQuery: _searchActive ? _searchQuery : '',
+                    highlightColor: scheme.tertiary,
+                    fontScale: state.fontScale,
+                    onToggleTask: (i) => cubit.toggleTask(i),
                   ),
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            if (note.pinned) ...<Widget>[
-                              Icon(
-                                Icons.push_pin_rounded,
-                                size: 18.w,
-                                color: Color(0xFFE08600),
-                              ),
-                              SizedBox(width: 6.w),
-                            ],
-                            if (locked) ...<Widget>[
-                              Icon(
-                                Icons.lock_rounded,
-                                size: 18.w,
-                                color: onColor,
-                              ),
-                              SizedBox(width: 6.w),
-                            ],
-                            Expanded(
-                              child: Text(
-                                displayTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.fade,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      height: 1.3,
-                                      color: onColor,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        if (locked)
-                          const SizedBox.shrink()
-                        else if (_searchActive && _searchQuery.isNotEmpty)
-                          _highlightText(
-                            displayNote.content.isEmpty
-                                ? l10n.noDetails
-                                : displayNote.content,
-                            _searchQuery,
-                            Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              height: 1.7,
-                              color: mutedOnColor,
-                            ),
-                            scheme.tertiary,
-                          )
-                        else if (Checklist.hasTasks(displayNote.content))
-                          _TaskList(
-                            content: displayNote.content,
-                            fontScale: state.fontScale,
-                            onToggle: (i) => cubit.toggleTask(i),
-                          )
-                        else if (displayNote.content.isEmpty)
-                          Text(
-                            l10n.noDetails,
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              height: 1.7,
-                              color: mutedOnColor,
-                            ),
-                          )
-                        else
-                          MarkdownText(
-                            data: displayNote.content,
-                            fontSize: 16 * state.fontScale,
-                            color: mutedOnColor,
-                          ),
-                      ],
+                  if (locked) ...<Widget>[
+                    const SizedBox(height: 16),
+                    UnlockPanelWidget(
+                      onUnlock: (pw) => cubit.unlock(pw),
                     ),
-                  ),
-                ),
-              ),
-            ),
-            if (locked) ...<Widget>[
-              const SizedBox(height: 16),
-              _UnlockPanel(
-                onUnlock: (pw) => cubit.unlock(pw),
-              ),
-            ] else ...<Widget>[
-              const SizedBox(height: 18),
-              _InfoRow(
-                icon: Icons.add_circle_outline_rounded,
-                label: l10n.createdAtLabel,
-                value: ArabicDateTime.full(displayNote.createdAt, l10n: l10n),
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.update_rounded,
-                label: l10n.lastModifiedLabel,
-                value: ArabicDateTime.full(displayNote.updatedAt, l10n: l10n),
-              ),
-              if (displayNote.tags.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    for (final tag in displayNote.tags)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 5.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: scheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(20.r),
-                          border: Border.all(
-                            color: scheme.outlineVariant.withValues(alpha: .6),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(
-                              Icons.sell_rounded,
-                              size: 13.w,
-                              color: scheme.primary,
+                  ] else ...<Widget>[
+                    const SizedBox(height: 18),
+                    ViewerInfoRowWidget(
+                      icon: Icons.add_circle_outline_rounded,
+                      label: l10n.createdAtLabel,
+                      value: ArabicDateTime.full(
+                        displayNote.createdAt,
+                        l10n: l10n,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ViewerInfoRowWidget(
+                      icon: Icons.update_rounded,
+                      label: l10n.lastModifiedLabel,
+                      value: ArabicDateTime.full(
+                        displayNote.updatedAt,
+                        l10n: l10n,
+                      ),
+                    ),
+                    if (displayNote.tags.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          for (final tag in displayNote.tags)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 5.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(
+                                  color: scheme.outlineVariant.withValues(
+                                    alpha: .6,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Icon(
+                                    Icons.sell_rounded,
+                                    size: 13.w,
+                                    color: scheme.primary,
+                                  ),
+                                  SizedBox(width: 5.w),
+                                  Text(
+                                    tag,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
                             ),
-                            SizedBox(width: 5.w),
+                        ],
+                      ),
+                    ],
+                    // The image grid stays isolated in its own BlocSelector so
+                    // checklist toggles / font changes never re-layout it.
+                    BlocSelector<ViewerCubit, ViewerState, List<String>>(
+                      selector: (s) => s.note.imageAttachments,
+                      builder: (context, attachments) {
+                        if (attachments.isEmpty) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            SizedBox(height: 20.h),
                             Text(
-                              tag,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
+                              l10n.imagesCountLabel(attachments.length),
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-              // The image grid stays isolated in its own BlocSelector so checklist
-              // toggles / font changes never re-layout the (costly) images.
-              BlocSelector<ViewerCubit, ViewerState, List<String>>(
-                selector: (s) => s.note.imageAttachments,
-                builder: (context, attachments) {
-                  if (attachments.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(height: 20.h),
-                      Text(
-                        l10n.imagesCountLabel(attachments.length),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 10.h),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.1,
-                        ),
-                        itemCount: attachments.length,
-                        itemBuilder: (context, index) => Semantics(
-                          button: true,
-                          label: '${l10n.semOpenImageViewer} ${index + 1}',
-                          child: GestureDetector(
-                            onTap: () => _openImageViewer(context, index),
-                            child: Hero(
-                              tag: 'note-image-${displayNote.id}-$index',
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16.r),
-                                child: Image.file(
-                                  File(attachments[index]),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  cacheWidth:
-                                      (MediaQuery.sizeOf(context).width *
-                                              MediaQuery.devicePixelRatioOf(
-                                                context,
-                                              ) /
-                                              2)
-                                          .round(),
-                                  errorBuilder: (_, _, _) => Container(
-                                    color: scheme.surfaceContainerHighest,
-                                    child: Icon(
-                                      Icons.broken_image_outlined,
-                                      color: scheme.onSurfaceVariant,
+                            SizedBox(height: 10.h),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 1.1,
+                              ),
+                              itemCount: attachments.length,
+                              itemBuilder: (context, index) => Semantics(
+                                button: true,
+                                label: '${l10n.semOpenImageViewer} ${index + 1}',
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      _openImageViewer(context, index),
+                                  child: Hero(
+                                    tag: 'note-image-${displayNote.id}-$index',
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16.r),
+                                      child: Image.file(
+                                        File(attachments[index]),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        cacheWidth: (MediaQuery.sizeOf(context)
+                                                    .width *
+                                                MediaQuery.devicePixelRatioOf(
+                                                  context,
+                                                ) /
+                                                2)
+                                            .round(),
+                                        errorBuilder: (_, _, _) => Container(
+                                          color: scheme.surfaceContainerHighest,
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
+                        );
+                      },
+                    ),
+                    if (fileAttachments.isNotEmpty) ...<Widget>[
+                      SizedBox(height: 20.h),
+                      Text(
+                        l10n.filesCountLabel(fileAttachments.length),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
+                      SizedBox(height: 6.h),
+                      for (final path in fileAttachments)
+                        ViewerFileTileWidget(
+                          path: path,
+                          onOpen: () => _openFile(context, path),
+                          onShare: () => _shareFile(path),
+                        ),
                     ],
-                  );
-                },
+                  ],
+                ],
               ),
-              if (fileAttachments.isNotEmpty) ...<Widget>[
-                SizedBox(height: 20.h),
-                Text(
-                  l10n.filesCountLabel(fileAttachments.length),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                for (final path in fileAttachments)
-                  _FileTile(
-                    path: path,
-                    onOpen: () => _openFile(context, path),
-                    onShare: () => _shareFile(path),
-                  ),
-              ],
-            ],
-            ],
+            ),
           ),
-        ),
-      ),
         ],
+        ),
       ),
     );
   }
@@ -532,33 +471,6 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     final matches = _findMatches(text, _searchQuery);
     if (matches.isEmpty) return l10n.searchNoMatches;
     return l10n.searchMatchOf(matches.length, matches.length);
-  }
-
-  Widget _highlightText(String text, String query, TextStyle? style, Color highlightColor) {
-    if (query.isEmpty) return Text(text, style: style);
-    final spans = <TextSpan>[];
-    final lower = text.toLowerCase();
-    final qLower = query.toLowerCase();
-    var start = 0;
-    while (start <= lower.length) {
-      final idx = lower.indexOf(qLower, start);
-      if (idx < 0) {
-        spans.add(TextSpan(text: text.substring(start), style: style));
-        break;
-      }
-      if (idx > start) {
-        spans.add(TextSpan(text: text.substring(start, idx), style: style));
-      }
-      spans.add(TextSpan(
-        text: text.substring(idx, idx + query.length),
-        style: style?.copyWith(
-          backgroundColor: highlightColor.withValues(alpha: 0.4),
-          fontWeight: FontWeight.w700,
-        ),
-      ));
-      start = idx + query.length;
-    }
-    return RichText(text: TextSpan(children: spans));
   }
 
   void _share(Note displayNote) {
@@ -641,6 +553,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     );
     if (changed == true) {
       await cubit.reloadNote();
+      if (mounted) setState(() => _changed = true);
     }
   }
 
@@ -674,9 +587,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     unawaited(ReminderService.cancel(note.id));
     await cubit.delete();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.movedToTrashOne)),
-    );
+    GlobalSnackBar.show(message: l10n.movedToTrashOne);
     Navigator.of(context).pop(true);
   }
 
@@ -749,8 +660,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
                             Icon(
                               Icons.history_rounded,
                               size: 48.w,
-                              color:
-                                  scheme.onSurfaceVariant.withValues(alpha: .4),
+                              color: scheme.onSurfaceVariant.withValues(alpha: .4),
                             ),
                             SizedBox(height: 12.h),
                             Text(
@@ -773,7 +683,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
                       itemCount: state.history.length,
                       itemBuilder: (context, index) {
                         final entry = state.history[index];
-                        return _HistoryTile(
+                        return ViewerHistoryTileWidget(
                           entry: entry,
                           isCurrent: index == 0,
                           onTap: () {
@@ -795,8 +705,8 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     final scheme = Theme.of(context).colorScheme;
     final cubit = context.read<ViewerCubit>();
     final note = cubit.state.note;
-    final bg = AppConstants
-        .noteColors[note.colorIndex % AppConstants.noteColors.length];
+    final bg =
+        AppConstants.noteColors[note.colorIndex % AppConstants.noteColors.length];
     final onColor = ColorUtils.foregroundOn(bg);
     showModalBottomSheet<void>(
       context: context,
@@ -844,8 +754,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18.r),
-                    border: Border.all(
-                        color: onColor.withValues(alpha: .25)),
+                    border: Border.all(color: onColor.withValues(alpha: .25)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -853,9 +762,7 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
                       if (entry.title.isNotEmpty)
                         Text(
                           entry.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
+                          style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: onColor,
@@ -865,12 +772,9 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
                       if (entry.content.isEmpty)
                         Text(
                           l10n.noDetails,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                                color: onColor.withValues(alpha: .6),
-                              ),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: onColor.withValues(alpha: .6),
+                          ),
                         )
                       else
                         MarkdownText(
@@ -1031,8 +935,14 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     );
     if (password == null || !context.mounted) return;
     await Haptics.light();
-    await cubit.setPassword(password);
+    try {
+      await cubit.setPassword(password);
+    } catch (_) {
+      if (mounted) _showProtectionFailed(this.context);
+      return;
+    }
     if (!context.mounted) return;
+    setState(() => _changed = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).securedToast)),
     );
@@ -1056,8 +966,14 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     );
     if (password == null || !context.mounted) return;
     await Haptics.light();
-    await cubit.changePassword(password);
+    try {
+      await cubit.changePassword(password);
+    } catch (_) {
+      if (mounted) _showProtectionFailed(this.context);
+      return;
+    }
     if (!context.mounted) return;
+    setState(() => _changed = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.passwordUpdatedToast)),
     );
@@ -1093,10 +1009,24 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
     if (cubit.state.unlocked == null || !context.mounted) return;
 
     await Haptics.heavy();
-    await cubit.removePassword();
+    try {
+      await cubit.removePassword();
+    } catch (_) {
+      if (mounted) _showProtectionFailed(this.context);
+      return;
+    }
     if (!context.mounted) return;
+    setState(() => _changed = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.protectionRemovedToast)),
+    );
+  }
+
+  void _showProtectionFailed(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).protectionFailedToast),
+      ),
     );
   }
 
@@ -1141,402 +1071,5 @@ class _NoteViewBodyState extends State<_NoteViewBody> {
   Future<void> _shareFile(String path) async {
     await Haptics.tap();
     await SharePlus.instance.share(ShareParams(files: <XFile>[XFile(path)]));
-  }
-}
-
-class _UnlockPanel extends StatefulWidget {
-  const _UnlockPanel({required this.onUnlock});
-
-  final Future<bool> Function(String password) onUnlock;
-
-  @override
-  State<_UnlockPanel> createState() => _UnlockPanelState();
-}
-
-class _UnlockPanelState extends State<_UnlockPanel> {
-  final TextEditingController _password = TextEditingController();
-  bool _checking = false;
-  bool _error = false;
-
-  @override
-  void dispose() {
-    _password.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_checking || _password.text.isEmpty) return;
-    setState(() {
-      _checking = true;
-      _error = false;
-    });
-    final ok = await widget.onUnlock(_password.text);
-    if (!mounted) return;
-    if (!ok) {
-      await Haptics.heavy();
-      if (!mounted) return;
-      setState(() {
-        _checking = false;
-        _error = true;
-      });
-      _password.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(Icons.lock_rounded, color: scheme.primary),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Text(
-                  l10n.unlockPanelTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
-          TextField(
-            controller: _password,
-            obscureText: true,
-            enabled: !_checking,
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _submit(),
-            decoration: InputDecoration(
-              hintText: l10n.passwordHint,
-              prefixIcon: const Icon(Icons.key_rounded),
-              errorText: _error ? l10n.wrongPasswordToast : null,
-            ),
-          ),
-          SizedBox(height: 14.h),
-          SizedBox(
-            height: 50.h,
-            child: FilledButton.icon(
-              onPressed: _checking ? null : _submit,
-              icon: _checking
-                  ? SizedBox(
-                      width: 18.w,
-                      height: 18.h,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Icon(Icons.lock_open_rounded),
-              label: Text(l10n.unlockPanelButton),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FileTile extends StatelessWidget {
-  const _FileTile({
-    required this.path,
-    required this.onOpen,
-    required this.onShare,
-  });
-
-  final String path;
-  final VoidCallback onOpen;
-  final VoidCallback onShare;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8.h),
-      child: Material(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14.r),
-        child: Semantics(
-          button: true,
-          label:
-              '${AppLocalizations.of(context).semOpenFile} ${AttachmentUtils.fileName(path)}',
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14.r),
-            onTap: onOpen,
-            child: Padding(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-              child: Row(
-                children: <Widget>[
-                  Icon(attachmentIcon(path), size: 22.w, color: scheme.primary),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: Text(
-                      AttachmentUtils.fileName(path),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                  IconButton(
-                    tooltip: AppLocalizations.of(context).shareTooltip,
-                    onPressed: onShare,
-                    icon: Icon(Icons.ios_share_rounded, size: 20.w),
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TaskList extends StatelessWidget {
-  const _TaskList({
-    required this.content,
-    required this.fontScale,
-    required this.onToggle,
-  });
-  final String content;
-  final double fontScale;
-  final ValueChanged<int> onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final lines = content.split('\n');
-
-    final children = <Widget>[];
-    var taskIndex = -1;
-    for (final line in lines) {
-      if (Checklist.isTaskLine(line)) {
-        taskIndex++;
-        final index = taskIndex;
-        final checked = line.toLowerCase().contains('[x]');
-        final text =
-            line.replaceFirst(RegExp(r'^\s*-\s\[[ xX]\]\s?'), '');
-        final hasText = text.trim().isNotEmpty;
-        children.add(
-          Semantics(
-            checked: checked,
-            label: hasText
-                ? text
-                : AppLocalizations.of(context).semChecklistItem,
-            hint: AppLocalizations.of(context).semChecklistHint,
-            button: true,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onToggle(index),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 3.h),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(
-                      checked
-                          ? Icons.check_box_rounded
-                          : Icons.check_box_outline_blank_rounded,
-                      size: 22.w,
-                      color: checked
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
-                    ),
-                    if (hasText) ...<Widget>[
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Text(
-                          text,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                                height: 1.6,
-                                fontSize: 16 * fontScale,
-                                color: mutedTextOn(scheme),
-                                decoration: checked
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      } else if (line.trim().isEmpty) {
-        children.add(SizedBox(height: 8.h));
-      } else {
-        children.add(
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 2.h),
-            child: Text(
-              line,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(height: 1.7),
-            ),
-          ),
-        );
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: children,
-    );
-  }
-}
-
-Color mutedTextOn(ColorScheme scheme) =>
-    scheme.onSurface.withValues(alpha: .82);
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: <Widget>[
-        Icon(icon, size: 18.w, color: scheme.primary),
-        SizedBox(width: 10.w),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({
-    required this.entry,
-    required this.isCurrent,
-    required this.onTap,
-  });
-
-  final NoteHistory entry;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    final preview = entry.content.trim();
-    final previewText =
-        preview.length > 80 ? '${preview.substring(0, 80)}...' : preview;
-
-    return ListTile(
-      leading: Container(
-        width: 40.w,
-        height: 40.h,
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? scheme.primaryContainer
-              : scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Center(
-          child: Text(
-            entry.title.isNotEmpty ? entry.title[0] : '?',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: isCurrent ? scheme.primary : scheme.onSurfaceVariant,
-              fontSize: 18.sp,
-            ),
-          ),
-        ),
-      ),
-      title: Text(
-        entry.title.isNotEmpty ? entry.title : l10n.untitled,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: isCurrent ? scheme.primary : null,
-        ),
-      ),
-      subtitle: previewText.isNotEmpty
-          ? Text(
-              previewText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: <Widget>[
-          Text(
-            ArabicDateTime.full(entry.timestamp, l10n: l10n),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          if (isCurrent) ...<Widget>[
-            SizedBox(height: 2.h),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(6.r),
-              ),
-              child: Text(
-                l10n.currentVersion,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-      onTap: onTap,
-    );
   }
 }

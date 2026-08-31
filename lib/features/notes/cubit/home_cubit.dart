@@ -234,4 +234,29 @@ class HomeCubit extends Cubit<HomeState> {
     _searchDebounce?.cancel();
     return super.close();
   }
+
+  // ── Optimistic helpers (synchronous, used by Dismissible) ──────────────
+
+  /// Removes a note from the in-memory list immediately.
+  /// The caller is responsible for persisting the DB change async.
+  void removeNote(String id) {
+    final updated = state.notes.where((n) => n.id != id).toList();
+    _safeEmit(state.copyWith(notes: updated));
+  }
+
+  /// Adds a note back to the in-memory list (for undo).
+  void restoreNote(Note note) {
+    final updated = List<Note>.of(state.notes)..add(note);
+    _safeEmit(state.copyWith(notes: updated));
+  }
+
+  /// Optimistically toggles pin status in-memory.
+  /// The caller persists the DB change async.
+  void togglePinOptimistic(String id) {
+    final updated = state.notes.map((n) {
+      if (n.id == id) return n.copyWith(pinned: !n.pinned);
+      return n;
+    }).toList();
+    _safeEmit(state.copyWith(notes: updated));
+  }
 }

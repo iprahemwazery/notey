@@ -387,6 +387,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get securedToast => 'Note secured';
 
   @override
+  String get protectionFailedToast =>
+      'Couldn\'t protect the note. Please try again.';
+
+  @override
   String get noDetails => 'No details';
 
   @override

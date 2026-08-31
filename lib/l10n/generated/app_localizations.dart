@@ -764,6 +764,12 @@ abstract class AppLocalizations {
   /// **'تم تأمين الملاحظة'**
   String get securedToast;
 
+  /// No description provided for @protectionFailedToast.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حماية الملاحظة، حاول مجددًا'**
+  String get protectionFailedToast;
+
   /// No description provided for @noDetails.
   ///
   /// In ar, this message translates to:

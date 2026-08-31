@@ -28,16 +28,36 @@ abstract final class NoteLockService {
   /// Throws when [password] is wrong (ciphertext won't authenticate).
   static Future<Note> unlock(Note note, String password) async {
     if (!note.isLocked || note.lockSalt == null) return note;
-    final title = await CryptoService.decryptField(
+    final salt = note.lockSalt!;
+    // Derive the PBKDF2 key once and reuse it for both fields — the KDF is by
+    // far the most expensive step, so this halves unlock latency for locked
+    // notes.
+    final key = await CryptoService.deriveFieldKey(
       stored: note.title,
       password: password,
-      salt: note.lockSalt!,
+      salt: salt,
     );
-    final content = await CryptoService.decryptField(
-      stored: note.content,
-      password: password,
-      salt: note.lockSalt!,
+    final title = await CryptoService.decryptFieldWithKey(
+      stored: note.title,
+      key: key,
     );
+    String content;
+    try {
+      content = await CryptoService.decryptFieldWithKey(
+        stored: note.content,
+        key: key,
+      );
+    } on Object {
+      // If the title authenticated, the password is correct — a content
+      // failure can only mean its own KDF config differs from the title's
+      // (legacy data). Validate against the content's own configuration
+      // before giving up; a wrong password already surfaced on the title.
+      content = await CryptoService.decryptField(
+        stored: note.content,
+        password: password,
+        salt: salt,
+      );
+    }
     return note.copyWith(title: title, content: content);
   }
 

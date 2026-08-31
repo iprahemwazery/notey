@@ -14,6 +14,7 @@ class HeaderWidget extends StatelessWidget {
     required this.onSortChanged,
     required this.onOpenSettings,
     required this.onOpenVault,
+    required this.onOpenTrash,
   });
 
   final int notesCount;
@@ -23,6 +24,7 @@ class HeaderWidget extends StatelessWidget {
   final ValueChanged<NoteSort> onSortChanged;
   final VoidCallback onOpenSettings;
   final VoidCallback onOpenVault;
+  final VoidCallback onOpenTrash;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +79,9 @@ class HeaderWidget extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '$notesCount',
+                  AppLocalizations.of(context).homeNotesCount(notesCount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: scheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
@@ -88,6 +92,19 @@ class HeaderWidget extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
+                SizedBox(
+                  width: 34.w,
+                  height: 40.h,
+                  child: IconButton(
+                    tooltip: AppLocalizations.of(context).trashTitle,
+                    onPressed: onOpenTrash,
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
                 SizedBox(
                   width: 34.w,
                   height: 40.h,
@@ -126,7 +143,7 @@ class HeaderWidget extends StatelessWidget {
                     onPressed: onOpenSettings,
                     padding: EdgeInsets.zero,
                     icon: Icon(
-                      Icons.settings_rounded,
+                      Icons.settings_outlined,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),

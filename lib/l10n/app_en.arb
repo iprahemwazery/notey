@@ -111,6 +111,7 @@
   "removeConfirm": "Remove",
   "protectionRemovedToast": "Protection removed",
   "securedToast": "Note secured",
+  "protectionFailedToast": "Couldn't protect the note. Please try again.",
   "noDetails": "No details",
   "createdAtLabel": "Created",
   "lastModifiedLabel": "Last modified",

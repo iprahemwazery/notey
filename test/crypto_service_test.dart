@@ -144,6 +144,34 @@ void main() {
       );
     });
 
+    test('derived-key cache serves repeated unlocks but stays correct', () async {
+      final note = Note.create(title: 'عنوان سري', content: 'محتوى سري');
+      const password = 'pass-1234';
+
+      final locked = await NoteLockService.lock(note, password);
+      final map = Map<String, Object?>.from(locked.toMap());
+      final reloaded = Note.fromMap(map);
+
+      // First unlock populates the cache; a second unlock for the same note
+      // with the same password hits the cache and still decrypts correctly.
+      final first = await NoteLockService.unlock(reloaded, password);
+      final second = await NoteLockService.unlock(reloaded, password);
+      expect(first.title, 'عنوان سري');
+      expect(second.title, 'عنوان سري');
+
+      // A wrong password on the same salt must NOT be served from the cache
+      // (it would collide only if the cache key ignored the password).
+      expect(
+        () => NoteLockService.unlock(reloaded, 'wrong'),
+        throwsA(isA<SecretBoxAuthenticationError>()),
+      );
+
+      // Clearing the cache keeps everything working.
+      CryptoService.clearKeyCache();
+      final afterClear = await NoteLockService.unlock(reloaded, password);
+      expect(afterClear.title, 'عنوان سري');
+    });
+
     test('removeLock clears protection flags', () async {
       final note = Note.create(title: 't', content: 'c');
       final locked = await NoteLockService.lock(note, 'pw');

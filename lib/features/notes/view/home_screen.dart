@@ -8,13 +8,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:notey/core/constants/app_constants.dart';
+import 'package:notey/core/theme/theme_extensions.dart';
 
 import 'package:notey/core/services/app_lock_controller.dart';
 
 import 'package:notey/core/services/biometric_service.dart';
 
-import 'package:notey/core/services/haptics.dart';
+import 'package:notey/core/services/global_snackbar.dart';
 
+import 'package:notey/core/services/haptics.dart';
 import 'package:notey/core/services/reminder_service.dart';
 
 import 'package:notey/core/services/share_receiver.dart';
@@ -67,10 +69,11 @@ import 'package:notey/features/notes/view/note_editor_screen.dart';
 
 import 'package:notey/features/settings/view/settings_screen.dart';
 
+import 'package:notey/features/trash/view/trash_screen.dart';
+
 import 'package:notey/features/vault/view/vault_screen.dart';
 
 import 'package:notey/features/notes/view/note_view_screen.dart';
-
 
 /// Home screen: shows the notes grid + search + add/edit/pin/delete actions.
 class HomeScreen extends StatefulWidget {
@@ -334,6 +337,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _openTrash() async {
+    await Haptics.tap();
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            TrashScreen(repository: _repository, imageStore: _imageStore),
+      ),
+    );
+    if (mounted) _load();
+  }
+
   void _onSearchChanged(String value) {
     context.read<HomeCubit>().onSearchChanged(value);
   }
@@ -427,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Haptics.tap();
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      backgroundColor: context.scheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
@@ -479,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: context.scheme.error,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.delete),
@@ -494,32 +509,54 @@ class _HomeScreenState extends State<HomeScreen> {
     unawaited(_trashNotes(<Note>[note]));
   }
 
+  /// Called from Dismissible.onDismissed (delete direction).
+  /// Removes the note from cubit state synchronously BEFORE the async
+  /// DB write, ensuring the Dismissible is never orphaned in the tree.
+  void _trashNoteSwipe(Note note) {
+    Haptics.heavy();
+    context.read<HomeCubit>().removeNote(note.id);
+    unawaited(_trashNotes(<Note>[note]));
+  }
+
+  /// Called from Dismissible.onDismissed (pin direction).
+  /// Toggles pin in cubit state synchronously, then persists to DB async.
+  void _pinNoteSwipe(Note note) {
+    Haptics.tap();
+    context.read<HomeCubit>().togglePinOptimistic(note.id);
+    unawaited(_persistPin(note));
+  }
+
+  Future<void> _persistPin(Note note) async {
+    await _repository.update(note.copyWith(pinned: !note.pinned));
+  }
+
   Future<void> _trashNotes(List<Note> notes) async {
+    // Idempotent optimistic removal: safe to call even if the caller already
+    // removed the note (e.g. from Dismissible.onDismissed via _trashNoteSwipe).
+    final cubit = context.read<HomeCubit>();
+    for (final note in notes) {
+      cubit.removeNote(note.id);
+    }
+
     await _repository.softDeleteAll(notes.map((n) => n.id).toList());
     await ReminderService.cancelAll(notes.map((n) => n.id));
     if (!mounted || notes.isEmpty) return;
 
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          notes.length == 1
-              ? l10n.movedToTrashOne
-              : l10n.movedToTrashCount(notes.length),
-        ),
-        action: SnackBarAction(
-          label: l10n.undoAction,
-          onPressed: () async {
-            await _repository.restoreAll(notes.map((n) => n.id).toList());
-            for (final note in notes) {
-              unawaited(ReminderService.sync(note));
-            }
-            _load();
-          },
-        ),
-      ),
+    GlobalSnackBar.show(
+      message: notes.length == 1
+          ? l10n.movedToTrashOne
+          : l10n.movedToTrashCount(notes.length),
+      actionLabel: l10n.undoAction,
+      duration: const Duration(seconds: 5),
+      onAction: () async {
+        await _repository.restoreAll(notes.map((n) => n.id).toList());
+        for (final note in notes) {
+          cubit.restoreNote(note);
+          unawaited(ReminderService.sync(note));
+        }
+      },
     );
-    await _load();
   }
 
   Future<bool?> _confirmBulkDelete(int count) {
@@ -536,7 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: context.scheme.error,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.delete),
@@ -559,7 +596,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _swipeable(ColorScheme scheme, Note note) {
     return Dismissible(
-      key: ValueKey<String>('swipe-${note.id}'),
+      key: Key(note.id.toString()),
       direction: context.read<HomeCubit>().state.selectionMode
           ? DismissDirection.none
           : DismissDirection.horizontal,
@@ -569,9 +606,9 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       onDismissed: (direction) {
         if (direction == DismissDirection.endToStart) {
-          _deleteNote(note);
+          _trashNoteSwipe(note);
         } else {
-          _togglePin(note);
+          _pinNoteSwipe(note);
         }
       },
       background: Container(
@@ -637,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
           prev.sortMode != cur.sortMode ||
           prev.isSearching != cur.isSearching,
       builder: (context, state) {
-        final scheme = Theme.of(context).colorScheme;
+        final scheme = context.scheme;
         final notes = state.sortedNotes;
 
         return Scaffold(
@@ -678,6 +715,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               .setSort(_noteSortToSortMode(sort)),
                           onOpenSettings: _openSettings,
                           onOpenVault: _openVault,
+                          onOpenTrash: _openTrash,
                         ),
                 ),
                 Padding(

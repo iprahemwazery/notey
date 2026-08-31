@@ -2,10 +2,27 @@ import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:cryptography/cryptography.dart';
 
 /// Note-field encryption (AES-GCM) + password hashing for the app PIN.
 abstract final class CryptoService {
+  /// Bounded LRU-ish in-memory cache of derived keys keyed by a HMAC of
+  /// (password, salt, iterations). PBKDF2 is the most expensive step in
+  /// encrypt/decrypt (hundreds of thousands of iterations), so caching the
+  /// derived key lets repeated unlocks/verifies with the same password skip
+  /// the KDF entirely — a big win for rapidly navigating locked notes. Only
+  /// already-derived key bytes are held (never the plaintext password), and
+  /// AES-GCM still authenticates on every decrypt, so a wrong password on
+  /// first try simply misses the cache and re-derives as before.
+  ///
+  /// The cache is capped so memory stays bounded and test isolation (where
+  /// iteration counts are lowered per-test) never sees stale keys.
+  static const int _keyCacheCapacity = 16;
+  static final Map<String, List<int>> _keyCache = <String, List<int>>{};
+  static final List<String> _keyCacheOrder = <String>[];
+
   /// Current PBKDF2 iteration count for new encryptions. Mutable so tests
   /// can lower it; existing data stays readable because the count is stored.
   /// Minimum 100,000 to prevent accidental weak encryption.
@@ -55,8 +72,19 @@ abstract final class CryptoService {
     required String password,
     required String salt,
   }) async {
+    final key = await deriveFieldKey(stored: stored, password: password, salt: salt);
+    return decryptFieldWithKey(stored: stored, key: key);
+  }
+
+  /// Parses the KDF configuration embedded in [stored] and derives the key.
+  /// Sharing one derived key across several fields (e.g. a note's title AND
+  /// content) halves the PBKDF2 cost of unlocking protected notes.
+  static Future<SecretKey> deriveFieldKey({
+    required String stored,
+    required String password,
+    required String salt,
+  }) async {
     var iterations = _legacyIterations;
-    var payload = stored;
     if (stored.startsWith('$_v2Prefix.')) {
       final parts = stored.split('.');
       if (parts.length != 5) {
@@ -66,9 +94,23 @@ abstract final class CryptoService {
       if (iterations < 1) {
         throw const FormatException('Invalid iteration count');
       }
+    }
+    return _deriveKeyCached(password, salt, iterations);
+  }
+
+  /// Decrypts a field with an already-derived [key] (see [deriveFieldKey]).
+  static Future<String> decryptFieldWithKey({
+    required String stored,
+    required SecretKey key,
+  }) async {
+    var payload = stored;
+    if (stored.startsWith('$_v2Prefix.')) {
+      final parts = stored.split('.');
+      if (parts.length != 5) {
+        throw const FormatException('Corrupted cipher field');
+      }
       payload = parts.sublist(2).join('.');
     }
-    final key = await _deriveKey(password, salt, iterations);
     final segments = payload.split('.');
     if (segments.length != 3) {
       throw const FormatException('Corrupted cipher field');
@@ -106,24 +148,42 @@ abstract final class CryptoService {
     int iterations,
   ) {
     if (iterations < _isolateDeriveThreshold) {
-      return Pbkdf2(
-        macAlgorithm: Hmac.sha256(),
-        iterations: iterations,
-        bits: 256,
-      )
-          .deriveKeyFromPassword(password: password, nonce: nonce)
-          .then((key) => key.extractBytes());
+      return _pbkdf2Inline(password, nonce, iterations);
     }
-    return Isolate.run(
-      () async {
-        final key = await Pbkdf2(
-          macAlgorithm: Hmac.sha256(),
-          iterations: iterations,
-          bits: 256,
-        ).deriveKeyFromPassword(password: password, nonce: nonce);
-        return key.extractBytes();
-      },
-    );
+    // Offload the CPU-heavy KDF to a background isolate so the UI never
+    // blocks. If isolate offloading is unavailable on the current platform
+    // (or a sendable-boundary failure occurs), fall back to an inline derive
+    // instead of letting a storage/security action crash the whole app.
+    try {
+      return Isolate.run(
+        () async {
+          final key = await Pbkdf2(
+            macAlgorithm: Hmac.sha256(),
+            iterations: iterations,
+            bits: 256,
+          ).deriveKeyFromPassword(password: password, nonce: nonce);
+          return key.extractBytes();
+        },
+      ).catchError((Object e) {
+        debugPrint('CryptoService isolate offload failed — falling back inline: $e');
+        return _pbkdf2Inline(password, nonce, iterations);
+      });
+    } catch (_) {
+      return _pbkdf2Inline(password, nonce, iterations);
+    }
+  }
+
+  static Future<List<int>> _pbkdf2Inline(
+    String password,
+    List<int> nonce,
+    int iterations,
+  ) async {
+    final key = await Pbkdf2(
+      macAlgorithm: Hmac.sha256(),
+      iterations: iterations,
+      bits: 256,
+    ).deriveKeyFromPassword(password: password, nonce: nonce);
+    return key.extractBytes();
   }
 
   static Future<SecretKey> _deriveKey(
@@ -133,6 +193,50 @@ abstract final class CryptoService {
   ) async {
     final bytes = await _pbkdf2Derive(password, base64Decode(salt), iterations);
     return SecretKey(bytes);
+  }
+
+  /// Derives a key exactly as [_deriveKey] but memoized across calls so
+  /// repeated derives for the same (password, salt, iterations) reuse the
+  /// already-computed key. Used by [deriveFieldKey] and by the PIN verifier
+  /// — both are hot paths on locked-note navigation.
+  static Future<SecretKey> _deriveKeyCached(
+    String password,
+    String salt,
+    int iterations,
+  ) async {
+    final cacheKey = await _saltKeyCacheKey(password, salt, iterations);
+    final hit = _keyCache[cacheKey];
+    if (hit != null) return SecretKey(hit);
+
+    final bytes = await _pbkdf2Derive(password, base64Decode(salt), iterations);
+    _keyCacheOrder.remove(cacheKey);
+    _keyCacheOrder.add(cacheKey);
+    if (_keyCacheOrder.length > _keyCacheCapacity) {
+      final evicted = _keyCacheOrder.removeAt(0);
+      _keyCache.remove(evicted);
+    }
+    _keyCache[cacheKey] = bytes;
+    return SecretKey(bytes);
+  }
+
+  /// Builds a stable, non-reversing cache key from the secret + KDF params.
+  /// Uses SHA-256 so the key never embeds the plaintext password.
+  static Future<String> _saltKeyCacheKey(
+    String password,
+    String salt,
+    int iterations,
+  ) async {
+    final digest = await Sha256()
+        .hash(utf8.encode('$password\u0000$salt\u0000$iterations'));
+    return '$iterations:${base64Encode(digest.bytes)}';
+  }
+
+  /// Clears the in-memory derived-key cache. Exposed for tests and for
+  /// clearing transient key material on sensitive lifecycle events.
+  @visibleForTesting
+  static void clearKeyCache() {
+    _keyCache.clear();
+    _keyCacheOrder.clear();
   }
 
   static List<int> _randomNonce() => _randomBytes(12);
@@ -183,12 +287,12 @@ abstract final class PinHasher {
     String pin,
     int iterations,
   ) async {
-    final bytes = await CryptoService._pbkdf2Derive(
+    final key = await CryptoService._deriveKeyCached(
       pin,
-      base64Decode(salt),
+      salt,
       iterations,
     );
-    return base64Encode(bytes);
+    return base64Encode(await key.extractBytes());
   }
 
   static Future<String> _legacySha256Hash(String salt, String pin) async {

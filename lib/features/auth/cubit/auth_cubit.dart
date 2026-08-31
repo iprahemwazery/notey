@@ -357,10 +357,12 @@ class AuthCubit extends Cubit<AuthState> {
     if (isClosed) return;
 
     if (ok) {
-      await _clearLockout();
-      await Haptics.light();
+      // Remove the lockout markers off the critical path — the match already
+      // proves the PIN, so the unlock transition must not wait on prefs I/O.
+      unawaited(_clearLockout());
       if (isClosed) return;
       emit(state.copyWith(phase: AuthPhase.ready));
+      await Haptics.light();
     } else {
       await _recordFailedAttempt();
       await Haptics.heavy();

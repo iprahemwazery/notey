@@ -2,12 +2,15 @@ import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:notey/core/services/haptics.dart';
 
 import 'package:notey/data/repositories/secure_vault_repository.dart';
+
+import 'package:notey/features/vault/cubit/vault_cubit.dart';
 
 import 'package:notey/data/services/vault_file_store.dart';
 
@@ -238,7 +241,14 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
       final repository =
           widget.repository ??
           SecureVaultRepository(); // Fresh repo: vault screen reloads on return.
-      await repository.upsert(entry);
+      final cubit = _vaultCubit(context);
+      if (cubit != null) {
+        // Vault flows commit through the cubit so the list updates in place
+        // immediately (no full re-decrypt round-trip on return).
+        await cubit.upsert(entry);
+      } else {
+        await repository.upsert(entry);
+      }
       if (!mounted) return;
       Navigator.pop(context, true);
     } on Exception {
@@ -414,6 +424,16 @@ class _VaultEntryEditorScreenState extends State<VaultEntryEditorScreen> {
   }
 
   AppLocalizations get l10n => AppLocalizations.of(context);
+
+  /// The vault cubit when this editor was pushed from the vault screen.
+  /// Standalone uses (tests, deep links) fall back to repository-only writes.
+  VaultCubit? _vaultCubit(BuildContext context) {
+    try {
+      return context.read<VaultCubit>();
+    } on Object {
+      return null;
+    }
+  }
 
   String _generate() {
     const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';

@@ -3,9 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:notey/core/services/app_lock_controller.dart';
 import 'package:notey/core/services/biometric_service.dart';
+import 'package:notey/core/theme/theme_extensions.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
 import 'package:notey/features/auth/view/biometric_setup_screen.dart';
-import 'package:notey/features/auth/view/lock_setup_screen.dart'
+import 'package:notey/features/auth/view/pin_change_screen.dart'
     show PinChangeScreen;
 
 import 'settings_section.dart';
@@ -40,6 +41,8 @@ class _SecuritySectionState extends State<SecuritySection> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final method = widget.lockController.method;
+    final textColor = context.getAdaptiveTextColor(context);
+    final mutedColor = context.getAdaptiveMutedTextColor(context);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -52,19 +55,32 @@ class _SecuritySectionState extends State<SecuritySection> {
           children: <Widget>[
             SettingsSectionLabel(text: l10n.sectionSecurity),
             ListTile(
-              leading: const Icon(Icons.lock_outline_rounded),
-              title: Text(l10n.lockMethodTile),
+              leading: Icon(Icons.lock_outline_rounded, color: textColor),
+              title: Text(
+                l10n.lockMethodTile,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: textColor),
+              ),
               subtitle: Text(
                 _methodLabel(widget.lockController, l10n),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: mutedColor),
               ),
-              trailing: const Icon(Icons.chevron_left_rounded),
+              trailing: Icon(Icons.chevron_left_rounded, color: mutedColor),
               onTap: _chooseLockMethod,
             ),
             if (method == AppLockMethod.pin ||
                 method == AppLockMethod.biometric)
               ListTile(
-                leading: const Icon(Icons.password_rounded),
-                title: Text(l10n.changePin),
+                leading: Icon(Icons.password_rounded, color: textColor),
+                title: Text(
+                  l10n.changePin,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: textColor),
+                ),
                 onTap: _openPinSetup,
               ),
           ],
@@ -75,6 +91,7 @@ class _SecuritySectionState extends State<SecuritySection> {
 
   Future<void> _chooseLockMethod() async {
     final current = widget.lockController.method;
+    final textColor = context.getAdaptiveTextColor(context);
     final picked = await showModalBottomSheet<AppLockMethod>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -91,20 +108,27 @@ class _SecuritySectionState extends State<SecuritySection> {
               children: <Widget>[
                 for (final method in AppLockMethod.values) ...<Widget>[
                   ListTile(
-                    leading: Icon(switch (method) {
-                      AppLockMethod.biometric => Icons.fingerprint_rounded,
-                      AppLockMethod.device => Icons.grid_on_rounded,
-                      AppLockMethod.pin => Icons.pin_rounded,
-                      AppLockMethod.none => Icons.lock_open_rounded,
-                    }),
-                    title: Text(switch (method) {
-                      AppLockMethod.none => l10n.methodNone,
-                      AppLockMethod.biometric => l10n.methodBiometric,
-                      AppLockMethod.device => l10n.methodDevice,
-                      AppLockMethod.pin => l10n.methodPin,
-                    }),
+                    leading: Icon(
+                      switch (method) {
+                        AppLockMethod.biometric => Icons.fingerprint_rounded,
+                        AppLockMethod.device => Icons.grid_on_rounded,
+                        AppLockMethod.pin => Icons.pin_rounded,
+                        AppLockMethod.none => Icons.lock_open_rounded,
+                      },
+                      color: textColor,
+                    ),
+                    title: Text(
+                      switch (method) {
+                        AppLockMethod.none => l10n.methodNone,
+                        AppLockMethod.biometric => l10n.methodBiometric,
+                        AppLockMethod.device => l10n.methodDevice,
+                        AppLockMethod.pin => l10n.methodPin,
+                      },
+                      style: Theme.of(sheetContext).textTheme.bodyLarge
+                          ?.copyWith(color: textColor),
+                    ),
                     trailing: method == current
-                        ? const Icon(Icons.check_rounded)
+                        ? Icon(Icons.check_rounded, color: textColor)
                         : null,
                     onTap: () => Navigator.pop(sheetContext, method),
                   ),

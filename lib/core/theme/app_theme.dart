@@ -109,6 +109,11 @@ abstract final class AppTheme {
     final rawSnackBar = theme.snackBarTheme;
 
     final cleanedTheme = theme.copyWith(
+      canvasColor: isDark
+          ? const Color(0xFF0E1116)
+          : const Color(0xFFF4F7FB),
+      cardColor: colorScheme.surfaceContainerLow,
+      dividerColor: colorScheme.outlineVariant.withValues(alpha: .55),
       textTheme: textTheme,
       primaryTextTheme: primaryTextTheme,
       scaffoldBackgroundColor: isDark
@@ -205,8 +210,23 @@ abstract final class AppTheme {
         titleTextStyle: _clean(rawListTile.titleTextStyle),
         subtitleTextStyle: _clean(rawListTile.subtitleTextStyle),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surfaceContainerLow,
+        modalBackgroundColor: colorScheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colorScheme.surfaceContainer,
+        indicatorColor: colorScheme.secondaryContainer,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: colorScheme.onSecondaryContainer);
+          }
+          return IconThemeData(color: colorScheme.onSurfaceVariant);
+        }),
         labelTextStyle: _cleanWidgetStateTextStyle(
           theme.navigationBarTheme.labelTextStyle,
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:path/path.dart' as p;
 
@@ -12,6 +13,8 @@ import 'package:notey/core/services/screen_protector_service.dart';
 import 'package:notey/core/services/share_service.dart';
 
 import 'package:notey/data/repositories/secure_vault_repository.dart';
+
+import 'package:notey/features/vault/cubit/vault_cubit.dart';
 
 import 'package:notey/data/services/vault_file_store.dart';
 
@@ -53,6 +56,13 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
   final Set<String> _everRevealed = <String>{};
   late final VaultFileStore _fileStore = VaultFileStore();
   bool _busy = false;
+
+  /// True once the entry was edited (or deleted) so popping reports a change
+  /// back to the vault list, which then reloads instead of showing a stale row.
+  bool _changed = false;
+
+  /// Flip to true right before a programmatic pop so PopScope lets it through.
+  bool _canPop = false;
 
   @override
   void initState() {
@@ -154,7 +164,14 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
     if (changed == true && mounted) {
       final refreshed = await (widget.repository ?? SecureVaultRepository())
           .get(_entry.id);
-      if (refreshed != null && mounted) setState(() => _entry = refreshed);
+      if (refreshed != null && mounted) {
+        setState(() {
+          _entry = refreshed;
+          _changed = true;
+        });
+        // Mirror the edit into the vault list immediately.
+        _vaultCubit(context)?.applyUpsert(refreshed);
+      }
     }
   }
 
@@ -190,7 +207,11 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
       for (final encPath in _entry.attachments) {
         await _fileStore.delete(encPath);
       }
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        _changed = true;
+        _vaultCubit(context)?.applyRemove(_entry.id);
+        Navigator.pop(context, true);
+      }
     } on Exception {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -202,14 +223,30 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
 
   AppLocalizations get l10n => AppLocalizations.of(context);
 
+  /// The vault cubit when this screen was pushed from the vault list.
+  VaultCubit? _vaultCubit(BuildContext context) {
+    try {
+      return context.read<VaultCubit>();
+    } on Object {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final color = VaultMeta.colorFor(_entry.category, scheme);
 
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        setState(() => _canPop = true);
+        Navigator.of(context).pop(_changed);
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: Text(l10n.vaultTitle),
         actions: <Widget>[
           IconButton(
@@ -309,6 +346,7 @@ class _VaultEntryDetailScreenState extends State<VaultEntryDetailScreen> {
                 ],
               ],
             ),
+      ),
     );
   }
 

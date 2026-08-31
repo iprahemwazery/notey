@@ -5,6 +5,7 @@ import 'package:notey/core/constants/app_constants.dart';
 import 'package:notey/core/services/app_lock_controller.dart';
 import 'package:notey/core/services/app_reset_service.dart';
 import 'package:notey/core/services/biometric_service.dart';
+import 'package:notey/core/theme/theme_extensions.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
 
 import 'settings_section.dart';
@@ -31,14 +32,31 @@ class _AboutSectionState extends State<AboutSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final textColor = context.getAdaptiveTextColor(context);
+    final mutedColor = context.getAdaptiveMutedTextColor(context);
     return Column(
       children: <Widget>[
         SettingsSectionLabel(text: l10n.sectionAbout),
         ListTile(
-          leading: const Icon(Icons.sticky_note_2_rounded),
-          title: const Text(AppConstants.appName),
-          subtitle: Text(l10n.tagline),
-          trailing: Text(widget.version.isEmpty ? '…' : widget.version),
+          leading: Icon(Icons.sticky_note_2_rounded, color: textColor),
+          title: Text(
+            AppConstants.appName,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: textColor),
+          ),
+          subtitle: Text(
+            l10n.tagline,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: mutedColor),
+          ),
+          trailing: Text(
+            widget.version.isEmpty ? '…' : widget.version,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: mutedColor),
+          ),
         ),
         Divider(height: 32.h, indent: 20.w, endIndent: 20.w),
         ListTile(
@@ -50,7 +68,12 @@ class _AboutSectionState extends State<AboutSection> {
             l10n.clearAllData,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-          subtitle: Text(l10n.clearAllDataSubtitle),
+          subtitle: Text(
+            l10n.clearAllDataSubtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: mutedColor),
+          ),
           onTap: _busy ? null : _clearAllData,
         ),
       ],

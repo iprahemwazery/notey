@@ -393,6 +393,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get securedToast => 'تم تأمين الملاحظة';
 
   @override
+  String get protectionFailedToast => 'تعذّر حماية الملاحظة، حاول مجددًا';
+
+  @override
   String get noDetails => 'لا توجد تفاصيل';
 
   @override

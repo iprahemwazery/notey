@@ -113,7 +113,15 @@ class _PinAuthDialogState extends State<_PinAuthDialog> {
 
   Future<void> _submit() async {
     setState(() => _checking = true);
-    final ok = await widget.verify(_pin);
+    bool ok;
+    try {
+      ok = await widget.verify(_pin);
+    } on Exception {
+      // A failed storage read/write must never leave the dialog stuck in
+      // `_checking` (spinner + dead keypad). Treat it as a wrong PIN so the
+      // user can retry instead of the screen hanging forever.
+      ok = false;
+    }
     if (!mounted) return;
     if (ok) {
       Haptics.light();

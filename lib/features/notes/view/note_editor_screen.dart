@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -6,25 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart' show XFile;
 
-import 'dart:async';
-
-import 'package:notey/core/constants/app_constants.dart';
-
 import 'package:notey/core/services/file_opener_service.dart';
 
 import 'package:notey/core/services/haptics.dart';
 
 import 'package:notey/core/services/reminder_service.dart';
 
-import 'package:notey/core/utils/arabic_date_time.dart';
-
 import 'package:notey/core/services/note_lock_service.dart';
-
-import 'package:notey/core/utils/attachment_utils.dart';
-
-import 'package:notey/core/utils/file_icons.dart';
-
-import 'package:notey/core/utils/color_utils.dart';
 
 import 'package:notey/data/repositories/note_history_repository.dart';
 
@@ -46,7 +34,18 @@ import 'package:notey/widgets/password_dialog.dart';
 import 'drawing_screen.dart';
 import 'voice_recorder_sheet.dart';
 
-enum _ImageSource { camera, gallery, file, voice, draw }
+import 'widgets/editor/attachment_source_sheet.dart';
+import 'widgets/editor/attachment_strip_widget.dart';
+import 'widgets/editor/editor_color_picker_widget.dart';
+import 'widgets/editor/folder_picker_widget.dart';
+import 'widgets/editor/format_toolbar_widget.dart';
+import 'widgets/editor/gradient_save_button_widget.dart';
+import 'widgets/editor/protection_menu_widget.dart';
+import 'widgets/editor/reminder_row_widget.dart';
+import 'widgets/editor/tags_editor_widget.dart';
+import 'widgets/editor/undo_redo_button_widget.dart';
+
+enum _DiscardAction { save, discard, cancel }
 
 /// Create/edit screen. Auto-stamps created & updated timestamps on save.
 class NoteEditorScreen extends StatefulWidget {
@@ -208,96 +207,38 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   Future<void> _addAttachment() async {
     await Haptics.tap();
     if (!mounted) return;
-    final source = await showModalBottomSheet<_ImageSource>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-      ),
-      builder: (context) {
-        final l10n = AppLocalizations.of(context);
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  l10n.addImageSheetTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                SizedBox(height: 16.h),
-                _SheetOption(
-                  icon: Icons.photo_camera_rounded,
-                  label: l10n.cameraOption,
-                  onTap: () => Navigator.pop(context, _ImageSource.camera),
-                ),
-                SizedBox(height: 8.h),
-                _SheetOption(
-                  icon: Icons.photo_library_rounded,
-                  label: l10n.galleryOption,
-                  onTap: () => Navigator.pop(context, _ImageSource.gallery),
-                ),
-                SizedBox(height: 8.h),
-                _SheetOption(
-                  icon: Icons.attach_file_rounded,
-                  label: l10n.fileFromDeviceOption,
-                  onTap: () => Navigator.pop(context, _ImageSource.file),
-                ),
-                SizedBox(height: 8.h),
-                _SheetOption(
-                  icon: Icons.mic_rounded,
-                  label: l10n.voiceNoteOption,
-                  onTap: () => Navigator.pop(context, _ImageSource.voice),
-                ),
-                SizedBox(height: 8.h),
-                _SheetOption(
-                  icon: Icons.draw_rounded,
-                  label: l10n.drawOption,
-                  onTap: () => Navigator.pop(context, _ImageSource.draw),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
+    final source = await showAttachmentSourceSheet(context);
     if (source == null) return;
 
     try {
       switch (source) {
-        case _ImageSource.camera:
+        case AttachmentSource.camera:
           final picked = await _imageStore.pickFromCamera();
           if (picked == null) return;
           await _attachPicked(picked, isDocument: false);
-        case _ImageSource.gallery:
+        case AttachmentSource.gallery:
           final picked = await _imageStore.pickFromGallery();
           if (picked == null) return;
           await _attachPicked(picked, isDocument: false);
-        case _ImageSource.file:
+        case AttachmentSource.file:
           final files = await FilePicker.pickFiles(type: FileType.any);
           for (final file in files) {
             final path = file.path;
             if (path == null) continue;
             await _attachPicked(XFile(path), isDocument: true);
           }
-        case _ImageSource.voice:
+        case AttachmentSource.voice:
           if (!mounted) return;
           final voicePath = await showVoiceRecorderSheet(context);
           if (voicePath == null || !mounted) return;
           await _attachPicked(XFile(voicePath), isDocument: true);
-        case _ImageSource.draw:
+        case AttachmentSource.draw:
           await _drawFromCanvas();
       }
     } on Exception {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).attachmentPickFailed),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context).attachmentPickFailed)),
       );
     }
   }
@@ -621,9 +562,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).willSaveUnprotected),
-            ),
+            SnackBar(content: Text(AppLocalizations.of(context).willSaveUnprotected)),
           );
         }
       case 'keep':
@@ -662,6 +601,35 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       SnackBar(content: Text(AppLocalizations.of(context).movedToTrashOne)),
     );
     _exitWith(result: true);
+  }
+
+  void _applyUndoRedoToControllers() {
+    _titleController.text = _cubit.state.title;
+    _titleController.selection = TextSelection.collapsed(
+      offset: _cubit.state.title.length,
+    );
+    _contentController.text = _cubit.state.content;
+    _contentController.selection = TextSelection.collapsed(
+      offset: _cubit.state.content.length,
+    );
+  }
+
+  void _undo() {
+    Haptics.tap();
+    _snapshotTimer?.cancel();
+    _cubit.undo();
+    _applyUndoRedoToControllers();
+  }
+
+  void _redo() {
+    Haptics.tap();
+    _snapshotTimer?.cancel();
+    _cubit.redo();
+    _applyUndoRedoToControllers();
+  }
+
+  Future<void> _addAttachmentFromStrip() async {
+    await _addAttachment();
   }
 
   @override
@@ -711,7 +679,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       onPressed: _saving ? null : _confirmDelete,
                       icon: const Icon(Icons.delete_outline_rounded),
                     ),
-                  _ProtectionMenu(
+                  ProtectionMenuWidget(
                     protected: _willBeProtected,
                     canRemove:
                         _willBeProtected &&
@@ -745,7 +713,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          _ColorPicker(
+                          EditorColorPickerWidget(
                             selectedIndex: state.colorIndex,
                             onSelected: (index) {
                               Haptics.tap();
@@ -774,55 +742,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           SizedBox(height: 12.h),
                           Row(
                             children: <Widget>[
-                              _UndoRedoButton(
+                              UndoRedoButtonWidget(
                                 icon: Icons.undo_rounded,
                                 tooltip: AppLocalizations.of(
                                   context,
                                 ).undoAction,
                                 enabled: state.canUndo,
-                                onPressed: () {
-                                  Haptics.tap();
-                                  _snapshotTimer?.cancel();
-                                  _cubit.undo();
-                                  _titleController.text = _cubit.state.title;
-                                  _titleController.selection =
-                                      TextSelection.collapsed(
-                                        offset: _cubit.state.title.length,
-                                      );
-                                  _contentController.text =
-                                      _cubit.state.content;
-                                  _contentController.selection =
-                                      TextSelection.collapsed(
-                                        offset: _cubit.state.content.length,
-                                      );
-                                },
+                                onPressed: _undo,
                               ),
-                              _UndoRedoButton(
+                              UndoRedoButtonWidget(
                                 icon: Icons.redo_rounded,
                                 tooltip: AppLocalizations.of(
                                   context,
                                 ).redoAction,
                                 enabled: state.canRedo,
-                                onPressed: () {
-                                  Haptics.tap();
-                                  _snapshotTimer?.cancel();
-                                  _cubit.redo();
-                                  _titleController.text = _cubit.state.title;
-                                  _titleController.selection =
-                                      TextSelection.collapsed(
-                                        offset: _cubit.state.title.length,
-                                      );
-                                  _contentController.text =
-                                      _cubit.state.content;
-                                  _contentController.selection =
-                                      TextSelection.collapsed(
-                                        offset: _cubit.state.content.length,
-                                      );
-                                },
+                                onPressed: _redo,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: _FormatToolbar(
+                                child: FormatToolbarWidget(
                                   controller: _contentController,
                                 ),
                               ),
@@ -844,18 +782,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             ),
                           ),
                           SizedBox(height: 24.h),
-                          _TagsEditor(
+                          TagsEditorWidget(
                             tags: state.tags,
                             onAdd: _addTag,
                             onRemove: (tag) => _cubit.removeTag(tag),
                           ),
                           SizedBox(height: 16.h),
-                          _FolderPicker(
+                          FolderPickerWidget(
                             folder: state.folder,
                             onChanged: (f) => _cubit.setFolder(f),
                           ),
                           SizedBox(height: 16.h),
-                          _ReminderRow(
+                          ReminderRowWidget(
                             reminderAt: state.reminderAt,
                             onPick: _pickReminder,
                             onClear: _clearReminder,
@@ -894,7 +832,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 ],
                               ),
                               TextButton.icon(
-                                onPressed: _addAttachment,
+                                onPressed: _addAttachmentFromStrip,
                                 icon: const Icon(Icons.attach_file_rounded),
                                 label: Text(
                                   AppLocalizations.of(context).addAttachment,
@@ -904,10 +842,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           ),
                           if (state.attachments.isNotEmpty) ...<Widget>[
                             SizedBox(height: 12.h),
-                            _AttachmentStrip(
+                            AttachmentStripWidget(
                               attachments: state.attachments,
                               onRemove: _removeAttachment,
-                              onAdd: _addAttachment,
+                              onAdd: _addAttachmentFromStrip,
                               onOpenFile: _openAttachment,
                             ),
                           ],
@@ -917,7 +855,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   ),
                   Padding(
                     padding: EdgeInsets.fromLTRB(20.w, 4.h, 20.w, 20.h),
-                    child: _GradientSaveButton(
+                    child: GradientSaveButtonWidget(
                       onPressed: _saving ? null : _save,
                       saving: _saving,
                     ),
@@ -928,862 +866,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-enum _DiscardAction { save, discard, cancel }
-
-/// AppBar action toggling the note's password protection.
-class _ProtectionMenu extends StatelessWidget {
-  const _ProtectionMenu({
-    required this.protected,
-    required this.canRemove,
-    required this.onSelect,
-  });
-
-  final bool protected;
-  final bool canRemove;
-  final ValueChanged<String>? onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: AppLocalizations.of(context).protectMenuTooltip,
-      enabled: onSelect != null,
-      onSelected: onSelect,
-      icon: Icon(
-        protected ? Icons.lock_rounded : Icons.lock_open_rounded,
-        color: protected ? Theme.of(context).colorScheme.primary : null,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-      itemBuilder: (context) {
-        final l10n = AppLocalizations.of(context);
-        return <PopupMenuEntry<String>>[
-          if (!protected)
-            PopupMenuItem<String>(
-              value: 'set',
-              child: ListTile(
-                leading: const Icon(Icons.lock_outline_rounded),
-                title: Text(l10n.setPasswordItem),
-                dense: true,
-              ),
-            )
-          else ...<PopupMenuEntry<String>>[
-            if (canRemove)
-              PopupMenuItem<String>(
-                value: 'remove',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.lock_open_rounded,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(l10n.removePasswordOnSave),
-                  dense: true,
-                ),
-              )
-            else
-              PopupMenuItem<String>(
-                value: 'keep',
-                enabled: false,
-                child: ListTile(
-                  leading: const Icon(Icons.lock_rounded),
-                  title: Text(l10n.noteProtectedItem),
-                  dense: true,
-                ),
-              ),
-          ],
-        ];
-      },
-    );
-  }
-}
-
-class _SheetOption extends StatelessWidget {
-  const _SheetOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16.r),
-      child: Semantics(
-        button: true,
-        label: label,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16.r),
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            child: Row(
-              children: <Widget>[
-                Icon(icon, color: scheme.primary),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_left_rounded,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ColorPicker extends StatelessWidget {
-  const _ColorPicker({required this.selectedIndex, required this.onSelected});
-
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Row(
-      children: <Widget>[
-        Icon(
-          Icons.palette_outlined,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Wrap(
-            spacing: 10.w,
-            runSpacing: 10.h,
-            children: List<Widget>.generate(AppConstants.noteColors.length, (
-              index,
-            ) {
-              final color = AppConstants.noteColors[index];
-              final selected = index == selectedIndex;
-              final onColor = ColorUtils.foregroundOn(color);
-              return Semantics(
-                button: true,
-                label: l10n.semSelectColor(color.toARGB32().toRadixString(16)),
-                child: GestureDetector(
-                  onTap: () => onSelected(index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    width: 34.w,
-                    height: 34.h,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected ? onColor : Colors.transparent,
-                        width: 2.5,
-                      ),
-                      boxShadow: selected
-                          ? <BoxShadow>[
-                              BoxShadow(
-                                color: onColor.withValues(alpha: .35),
-                                blurRadius: 8.r,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: selected
-                        ? Icon(Icons.check_rounded, size: 18.w, color: onColor)
-                        : null,
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AttachmentStrip extends StatelessWidget {
-  const _AttachmentStrip({
-    required this.attachments,
-    required this.onRemove,
-    required this.onAdd,
-    required this.onOpenFile,
-  });
-
-  final List<String> attachments;
-  final ValueChanged<String> onRemove;
-  final VoidCallback onAdd;
-
-  /// Opens a non-image attachment with the device's native viewer.
-  final ValueChanged<String> onOpenFile;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final images = attachments.where(AttachmentUtils.isImage).toList();
-    final files = attachments
-        .where((a) => !AttachmentUtils.isImage(a))
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        if (images.isNotEmpty)
-          SizedBox(
-            height: 96.h,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: <Widget>[
-                for (final path in images) ...<Widget>[
-                  Padding(
-                    padding: EdgeInsets.only(left: 10.w),
-                    child: Stack(
-                      children: <Widget>[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14.r),
-                          child: Image.file(
-                            File(path),
-                            width: 96.w,
-                            height: 96.h,
-                            fit: BoxFit.cover,
-                            cacheWidth:
-                                (96 * MediaQuery.devicePixelRatioOf(context))
-                                    .round(),
-                            errorBuilder: (_, _, _) => Container(
-                              width: 96.w,
-                              height: 96.h,
-                              color: scheme.surfaceContainerHighest,
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 4.h,
-                          right: 4.w,
-                          child: Semantics(
-                            button: true,
-                            label: AppLocalizations.of(context).semRemoveImage,
-                            child: GestureDetector(
-                              onTap: () => onRemove(path),
-                              child: Container(
-                                padding: EdgeInsets.all(3.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: .55),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 16.w,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                _AddTile(
-                  onTap: onAdd,
-                  icon: Icons.add_a_photo_rounded,
-                  label: AppLocalizations.of(context).semAddPhoto,
-                ),
-              ],
-            ),
-          )
-        else
-          _AddTile(
-            onTap: onAdd,
-            icon: Icons.add_a_photo_rounded,
-            label: AppLocalizations.of(context).semAddPhoto,
-            wide: true,
-          ),
-        if (files.isNotEmpty) ...<Widget>[
-          SizedBox(height: 10.h),
-          for (final path in files)
-            Padding(
-              padding: EdgeInsets.only(bottom: 8.h),
-              child: _FileChip(
-                path: path,
-                onOpen: () => onOpenFile(path),
-                onRemove: () => onRemove(path),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-}
-
-class _AddTile extends StatelessWidget {
-  const _AddTile({
-    required this.onTap,
-    required this.icon,
-    required this.label,
-    this.wide = false,
-  });
-
-  final VoidCallback onTap;
-  final IconData icon;
-  final String label;
-  final bool wide;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.only(left: 10.w),
-      child: Material(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14.r),
-        child: Semantics(
-          button: true,
-          label: label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14.r),
-            onTap: onTap,
-            child: SizedBox(
-              width: wide ? double.infinity : 96.w,
-              height: wide ? 56.h : 96.h,
-              child: Icon(icon, color: scheme.primary),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FileChip extends StatelessWidget {
-  const _FileChip({
-    required this.path,
-    required this.onOpen,
-    required this.onRemove,
-  });
-
-  final String path;
-  final VoidCallback onOpen;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return Semantics(
-      button: true,
-      label: l10n.semOpenFile,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12.r),
-        onTap: onOpen,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: .6),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(attachmentIcon(path), size: 20.w, color: scheme.primary),
-              SizedBox(width: 8.w),
-              Flexible(
-                child: Text(
-                  AttachmentUtils.fileName(path),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              SizedBox(width: 6.w),
-              Semantics(
-                button: true,
-                label: l10n.semRemoveFile,
-                child: GestureDetector(
-                  onTap: onRemove,
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: 18.w,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              SizedBox(width: 10.w),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GradientSaveButton extends StatelessWidget {
-  const _GradientSaveButton({required this.onPressed, required this.saving});
-
-  final VoidCallback? onPressed;
-  final bool saving;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: <Color>[scheme.primary, scheme.tertiary],
-    );
-
-    return Material(
-      color: Colors.transparent,
-      child: Ink(
-        width: double.infinity,
-        height: 56.h,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(18.r),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: scheme.primary.withValues(alpha: .4),
-              blurRadius: 18.r,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Semantics(
-          button: true,
-          label: l10n.semSaveNote,
-          hint: l10n.semSaveNoteHint,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18.r),
-            onTap: onPressed,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                if (saving)
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
-                else
-                  const Icon(Icons.save_rounded, color: Colors.white),
-                SizedBox(width: 10.w),
-                Text(
-                  saving ? l10n.saving : l10n.editorSaveButton,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Tag chips + inline input used by the editor.
-class _TagsEditor extends StatefulWidget {
-  const _TagsEditor({
-    required this.tags,
-    required this.onAdd,
-    required this.onRemove,
-  });
-
-  final List<String> tags;
-  final ValueChanged<String> onAdd;
-  final ValueChanged<String> onRemove;
-
-  @override
-  State<_TagsEditor> createState() => _TagsEditorState();
-}
-
-class _TagsEditorState extends State<_TagsEditor> {
-  final TextEditingController _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit(String raw) {
-    widget.onAdd(raw);
-    setState(() => _controller.clear());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          l10n.tagsSection,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        SizedBox(height: 8.h),
-        Wrap(
-          spacing: 8.w,
-          runSpacing: 8.h,
-          children: <Widget>[
-            for (final tag in widget.tags)
-              InputChip(
-                label: Text(tag),
-                deleteIcon: Icon(Icons.close_rounded, size: 16.w),
-                onDeleted: () => widget.onRemove(tag),
-                backgroundColor: scheme.surfaceContainerHigh,
-                side: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: .6),
-                ),
-                visualDensity: VisualDensity.compact,
-              ),
-          ],
-        ),
-        SizedBox(height: 8.h),
-        TextField(
-          controller: _controller,
-          decoration: InputDecoration(
-            hintText: l10n.addTagHint,
-            prefixIcon: const Icon(Icons.sell_outlined),
-            isDense: true,
-            suffixIcon: IconButton(
-              tooltip: l10n.addTag,
-              icon: const Icon(Icons.add_rounded),
-              onPressed: () => _submit(_controller.text),
-            ),
-          ),
-          onSubmitted: _submit,
-        ),
-      ],
-    );
-  }
-}
-
-/// Markdown formatting bar: wraps the current selection (or inserts a
-/// template at the caret) with the chosen syntax.
-class _FormatToolbar extends StatelessWidget {
-  const _FormatToolbar({required this.controller});
-
-  final TextEditingController controller;
-
-  void _wrap(String marker, {String placeholder = ''}) {
-    final selection = controller.selection;
-    final text = controller.text;
-    if (!selection.isValid) {
-      controller.value = TextEditingValue(
-        text: '$text$marker$placeholder$marker',
-        selection: TextSelection.collapsed(
-          offset: text.length + marker.length + placeholder.length,
-        ),
-      );
-      return;
-    }
-    final start = selection.start;
-    final end = selection.end;
-    final selected = text.substring(start, end);
-    final replaced =
-        '$marker${selected.isEmpty ? placeholder : selected}$marker';
-    controller.value = TextEditingValue(
-      text: text.replaceRange(start, end, replaced),
-      selection: TextSelection.collapsed(
-        offset: start + marker.length + selected.length,
-      ),
-    );
-  }
-
-  void _prefixLines(String prefix) {
-    final selection = controller.selection;
-    final text = controller.text;
-    var start = selection.start;
-    if (!selection.isValid) start = text.length;
-    // Extend to line start.
-    while (start > 0 && text[start - 1] != '\n') {
-      start--;
-    }
-    controller.value = TextEditingValue(
-      text: text.replaceRange(start, start, prefix),
-      selection: TextSelection.collapsed(
-        offset: selection.baseOffset + prefix.length,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-
-    Widget button(IconData icon, String tooltip, VoidCallback onTap) =>
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          tooltip: tooltip,
-          onPressed: () {
-            Haptics.tap();
-            onTap();
-          },
-          icon: Icon(icon, size: 20.w, color: scheme.onSurfaceVariant),
-        );
-
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh.withValues(alpha: .6),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            button(
-              Icons.format_bold_rounded,
-              l10n.formatBold,
-              () => _wrap('**', placeholder: l10n.textPlaceholder),
-            ),
-            button(
-              Icons.format_italic_rounded,
-              l10n.formatItalic,
-              () => _wrap('*', placeholder: l10n.textPlaceholder),
-            ),
-            button(
-              Icons.text_fields_rounded,
-              l10n.formatHeading,
-              () => _prefixLines('# '),
-            ),
-            button(
-              Icons.format_list_bulleted_rounded,
-              l10n.formatBullet,
-              () => _prefixLines('- '),
-            ),
-            button(
-              Icons.check_box_outlined,
-              l10n.formatCheckbox,
-              () => _prefixLines('- [ ] '),
-            ),
-            button(
-              Icons.code_rounded,
-              l10n.formatCode,
-              () => _wrap('`', placeholder: 'code'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReminderRow extends StatelessWidget {
-  const _ReminderRow({
-    required this.reminderAt,
-    required this.onPick,
-    required this.onClear,
-  });
-
-  final DateTime? reminderAt;
-  final VoidCallback onPick;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-    final has = reminderAt != null;
-
-    return Container(
-      padding: EdgeInsetsDirectional.fromSTEB(14.w, 10.h, 8.w, 10.h),
-      decoration: BoxDecoration(
-        color: has
-            ? scheme.primaryContainer.withValues(alpha: .35)
-            : scheme.surfaceContainerHigh.withValues(alpha: .5),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: has
-              ? scheme.primary.withValues(alpha: .4)
-              : Colors.transparent,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.alarm_rounded,
-            size: 20.w,
-            color: has ? scheme.primary : scheme.onSurfaceVariant,
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  l10n.reminderSection,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  has
-                      ? ArabicDateTime.full(reminderAt!, l10n: l10n)
-                      : l10n.noReminder,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: has ? scheme.onSurface : scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: has,
-            onChanged: (_) {
-              if (has) {
-                onClear();
-              } else {
-                onPick();
-              }
-            },
-          ),
-          IconButton(
-            tooltip: l10n.editReminder,
-            onPressed: onPick,
-            icon: Icon(
-              has ? Icons.edit_calendar_rounded : Icons.add_alarm_rounded,
-            ),
-          ),
-          if (has)
-            IconButton(
-              tooltip: l10n.clearReminder,
-              onPressed: onClear,
-              icon: Icon(Icons.close_rounded, color: scheme.error),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _UndoRedoButton extends StatelessWidget {
-  const _UndoRedoButton({
-    required this.icon,
-    required this.tooltip,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: enabled ? onPressed : null,
-      icon: Icon(
-        icon,
-        size: 20.w,
-        color: enabled
-            ? scheme.onSurfaceVariant
-            : scheme.onSurfaceVariant.withValues(alpha: .3),
-      ),
-    );
-  }
-}
-
-class _FolderPicker extends StatefulWidget {
-  const _FolderPicker({required this.folder, required this.onChanged});
-
-  final String folder;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_FolderPicker> createState() => _FolderPickerState();
-}
-
-class _FolderPickerState extends State<_FolderPicker> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.folder,
-  );
-
-  @override
-  void didUpdateWidget(covariant _FolderPicker old) {
-    super.didUpdateWidget(old);
-    if (old.folder != widget.folder && _controller.text != widget.folder) {
-      _controller.text = widget.folder;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          l10n.folderSection,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        SizedBox(height: 8.h),
-        TextField(
-          controller: _controller,
-          textInputAction: TextInputAction.done,
-          textCapitalization: TextCapitalization.words,
-          decoration: InputDecoration(
-            hintText: l10n.folderHint,
-            prefixIcon: const Icon(Icons.folder_rounded),
-            suffixIcon: _controller.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.close_rounded, size: 18.w),
-                    onPressed: () {
-                      _controller.clear();
-                      widget.onChanged('');
-                    },
-                  )
-                : null,
-          ),
-          onChanged: (v) => widget.onChanged(v.trim()),
-        ),
-      ],
     );
   }
 }
