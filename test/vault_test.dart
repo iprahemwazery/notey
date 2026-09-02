@@ -7,9 +7,9 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 
 import 'package:notey/core/services/vault_crypto.dart';
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/secure_vault_repository.dart';
+import 'package:notey/features/vault/data/repositories_impl/secure_vault_repository.dart';
 import 'package:notey/data/services/vault_file_store.dart';
-import 'package:notey/features/vault/model/vault_entry.dart';
+import 'package:notey/features/vault/domain/entities/vault_entry.dart';
 
 class _FakePathProvider extends PathProviderPlatform {
   _FakePathProvider(this.root);

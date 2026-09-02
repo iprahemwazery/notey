@@ -10,7 +10,7 @@ import 'package:notey/core/utils/arabic_date_time.dart';
 import 'package:notey/core/utils/color_utils.dart';
 
 import 'package:notey/l10n/generated/app_localizations.dart';
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
 
 
 /// A single compact, premium-styled note tile used inside the home grid.

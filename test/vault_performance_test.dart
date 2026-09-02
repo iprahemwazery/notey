@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:notey/data/repositories/secure_vault_repository.dart';
+import 'package:notey/features/vault/data/repositories_impl/secure_vault_repository.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
-import 'package:notey/features/vault/model/vault_entry.dart';
-import 'package:notey/features/vault/view/vault_entry_detail_screen.dart';
-import 'package:notey/features/vault/view/vault_screen.dart';
+import 'package:notey/features/vault/domain/entities/vault_entry.dart';
+import 'package:notey/features/vault/presentation/screens/vault_entry_detail_screen.dart';
+import 'package:notey/features/vault/presentation/screens/vault_screen.dart';
 
 /// Fast in-memory repo (no crypto/isolates) that counts every `getAll()`.
 /// `VaultScreen` builds its own cubit from `widget.repository`, so handing it

@@ -3,16 +3,16 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notey/core/services/note_lock_service.dart';
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/note_repository.dart';
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/data/repositories_impl/note_repository.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
 
 void main() {
-  late NoteRepository repository;
+  late NoteRepositoryImpl repository;
   late NoteDatabase database;
 
   setUp(() async {
     database = NoteDatabase(inMemory: true);
-    repository = NoteRepository(database: database);
+    repository = NoteRepositoryImpl(database: database);
   });
 
   tearDown(() => database.close());

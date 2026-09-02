@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notey/core/services/note_lock_service.dart';
-import 'package:notey/features/notes/view/note_view_screen.dart';
+import 'package:notey/features/notes/presentation/screens/note_view_screen.dart';
 
 import 'helpers.dart';
 

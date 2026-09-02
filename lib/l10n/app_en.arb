@@ -189,6 +189,7 @@
   "useBackupPin": "Use backup PIN",
   "biometricBackupHint": "Use your fingerprint to unlock, or use your backup PIN",
   "settingsTitle": "Settings",
+  "navHome": "Home",
   "sectionSecurity": "Lock & security",
   "lockMethodTile": "App lock method",
   "lockMethodUnset": "Not set",
@@ -423,5 +424,6 @@
   "audioUnavailable": "Audio isn't available",
   "reRecord": "Re-record",
   "attach": "Attach",
-  "replayPreview": "Preview"
+  "replayPreview": "Preview",
+  "pressBackAgainToExit": "Press back again to exit"
 }

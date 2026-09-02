@@ -9,10 +9,13 @@ import 'package:notey/app.dart';
 import 'package:notey/core/services/biometric_service.dart';
 import 'package:notey/core/services/crypto_service.dart';
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/note_repository.dart';
-import 'package:notey/features/notes/model/note.dart';
-import 'package:notey/features/notes/model/note_search_result.dart';
+import 'package:notey/features/notes/domain/repositories/note_repository.dart';
+import 'package:notey/features/notes/data/repositories_impl/note_repository.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
+import 'package:notey/features/notes/domain/entities/note_search_result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers.dart';
 
 class _FakeSecureStorage extends FlutterSecureStorage {
   final Map<String, String> values = <String, String>{};
@@ -79,7 +82,7 @@ class _FakeSecureStorage extends FlutterSecureStorage {
   }) async => Map<String, String>.of(values);
 }
 
-class _FakeRepository extends NoteRepository {
+class _FakeRepository extends NoteRepositoryImpl {
   _FakeRepository() : super(database: NoteDatabase(inMemory: true));
 
   final List<Note> notes = <Note>[];
@@ -478,6 +481,8 @@ void main() {
     expect(find.text('Notey'), findsNothing);
     expect(find.text('أفكاري الأولى'), findsOneWidget);
     expect(find.text('تفاصيل الملاحظة التجريبية'), findsOneWidget);
+
+    await flushSnackbarTimers(tester);
   });
 
   testWidgets('a note can be pinned and opened in the viewer', (

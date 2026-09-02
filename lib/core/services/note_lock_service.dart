@@ -1,4 +1,4 @@
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
 
 import 'crypto_service.dart';
 
@@ -7,15 +7,25 @@ import 'crypto_service.dart';
 abstract final class NoteLockService {
   static Future<Note> lock(Note note, String password) async {
     final salt = CryptoService.newSalt();
+    // PBKDF2 is by far the most expensive step of locking. Derive the key
+    // once and encrypt BOTH fields with it — sharing one (password, salt)
+    // means a lock runs a single derivation instead of two, halving lock
+    // latency and making the lock spinner feel near-instant.
+    final key = await CryptoService.deriveKeyForEncryption(
+      password: password,
+      salt: salt,
+    );
     final encryptedTitle = await CryptoService.encryptField(
       plain: note.title,
       password: password,
       salt: salt,
+      preKey: key,
     );
     final encryptedContent = await CryptoService.encryptField(
       plain: note.content,
       password: password,
       salt: salt,
+      preKey: key,
     );
     return note.copyWith(
       title: encryptedTitle,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:notey/features/notes/view/note_editor_screen.dart';
+import 'package:notey/features/notes/presentation/screens/note_editor_screen.dart';
 
 import 'helpers.dart';
 
@@ -80,6 +80,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('اكتب عنوانًا للملاحظة أولًا'), findsOneWidget);
+
+      await flushSnackbarTimers(tester);
     });
 
     testWidgets('editing existing note shows its title and content',
@@ -98,6 +100,51 @@ void main() {
 
       expect(find.text('ملاحظة قديمة'), findsOneWidget);
       expect(find.text('محتوى قديم'), findsOneWidget);
+    });
+
+    testWidgets('pressing تأمين locks immediately without a second save',
+        (WidgetTester tester) async {
+      final repo = FakeRepository();
+      final note = await createTestNote(
+        repo,
+        title: 'ملاحظة سريّة',
+        content: 'محتوى سري للغاية',
+      );
+
+      await tester.pumpWidget(
+        buildTestApp(NoteEditorScreen(note: note, repository: repo)),
+      );
+      await tester.pumpAndSettle();
+
+      // Open the protection menu and pick "set password".
+      await tester.tap(find.byIcon(Icons.lock_open_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('تعيين كلمة سر'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'كلمة السر'),
+        '123456',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'تأكيد كلمة السر'),
+        '123456',
+      );
+      await tester.tap(find.text('تأمين'));
+      await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 400)),
+      );
+      await tester.pumpAndSettle();
+
+      // The very first press of "تأمين" persists the lock to the DB —
+      // no separate Save required.
+      final stored = await repo.getNote(note.id);
+      expect(stored, isNotNull);
+      expect(stored!.isLocked, isTrue);
+      expect(stored.content, isNot('محتوى سري للغاية'));
+
+      await flushSnackbarTimers(tester);
     });
 
     testWidgets('back button with unsaved changes shows dialog',

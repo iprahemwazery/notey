@@ -635,6 +635,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsTitle => 'الإعدادات';
 
   @override
+  String get navHome => 'الرئيسية';
+
+  @override
   String get sectionSecurity => 'القفل والتأمين';
 
   @override
@@ -1326,4 +1329,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get replayPreview => 'معاينة';
+
+  @override
+  String get pressBackAgainToExit => 'اضغط رجوع مرة أخرى للخروج';
 }

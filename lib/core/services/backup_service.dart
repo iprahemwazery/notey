@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
+import 'package:notey/features/notes/data/models/note_model.dart';
 
 import 'package:notey/core/constants/app_constants.dart';
 
@@ -62,7 +63,7 @@ abstract final class BackupService {
         final key = '$folder/${p.basename(path)}';
         keys.add(key);
       }
-      final noteMap = note.copyWith(attachments: keys).toMap();
+      final noteMap = NoteModel.toMap(note.copyWith(attachments: keys));
       final encoded = const JsonEncoder.withIndent('    ').convert(noteMap);
       sink.write(encoded);
       if (ni < notes.length - 1) sink.write(',');
@@ -160,7 +161,7 @@ abstract final class BackupService {
     for (final item in list) {
       if (item is! Map<String, Object?>) continue;
       try {
-        final note = Note.fromMap(item);
+        final note = NoteModel.fromMap(item);
         final restored = <String>[
           for (final key in note.attachments)
             if (keyToPath.containsKey(key)) keyToPath[key]!,

@@ -4,7 +4,8 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notey/core/services/crypto_service.dart';
 import 'package:notey/core/services/note_lock_service.dart';
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
+import 'package:notey/features/notes/data/models/note_model.dart';
 
 void main() {
   setUp(() {
@@ -130,8 +131,8 @@ void main() {
       expect(locked.content, isNot('محتوى سري'));
 
       // The locked copy must persist as-is and come back encrypted.
-      final map = Map<String, Object?>.from(locked.toMap());
-      final reloaded = Note.fromMap(map);
+      final map = Map<String, Object?>.from(NoteModel.toMap(locked));
+      final reloaded = NoteModel.fromMap(map);
       expect(reloaded.isLocked, isTrue);
 
       final unlocked = await NoteLockService.unlock(reloaded, password);
@@ -149,8 +150,8 @@ void main() {
       const password = 'pass-1234';
 
       final locked = await NoteLockService.lock(note, password);
-      final map = Map<String, Object?>.from(locked.toMap());
-      final reloaded = Note.fromMap(map);
+      final map = Map<String, Object?>.from(NoteModel.toMap(locked));
+      final reloaded = NoteModel.fromMap(map);
 
       // First unlock populates the cache; a second unlock for the same note
       // with the same password hits the cache and still decrypts correctly.

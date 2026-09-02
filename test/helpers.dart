@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:notey/app.dart';
 import 'package:notey/core/services/biometric_service.dart';
 import 'package:notey/core/services/crypto_service.dart';
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/note_repository.dart';
+import 'package:notey/features/notes/domain/repositories/note_repository.dart';
+import 'package:notey/features/notes/data/repositories_impl/note_repository.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
-import 'package:notey/features/notes/model/note.dart';
-import 'package:notey/features/notes/model/note_search_result.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
+import 'package:notey/features/notes/domain/entities/note_search_result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fake secure storage backed by an in-memory map.
@@ -83,7 +85,7 @@ class FakeSecureStorage extends FlutterSecureStorage {
 }
 
 /// In-memory note repository for tests.
-class FakeRepository extends NoteRepository {
+class FakeRepository extends NoteRepositoryImpl {
   FakeRepository() : super(database: NoteDatabase(inMemory: true));
 
   final List<Note> notes = <Note>[];
@@ -259,6 +261,14 @@ Future<void> runAsyncSafe(
   }
 }
 
+/// Pumps past the GetX snackbar auto-dismiss timer (2s default) plus its
+/// close animation, so tests don't end with pending timers after a
+/// GlassSnackbar was shown.
+Future<void> flushSnackbarTimers(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 3));
+  await tester.pumpAndSettle();
+}
+
 /// Common test setup: fast crypto, deterministic cursor, default prefs.
 void setUpCommon({Map<String, Object>? prefs}) {
   CryptoService.pbkdf2Iterations = 1000;
@@ -297,15 +307,17 @@ Future<Note> createTestNote(
   return note;
 }
 
-/// Wraps any widget in a MaterialApp with localization for isolated screen tests.
+/// Wraps any widget in a GetMaterialApp with localization for isolated screen tests.
 /// Pushes [child] as a second route so a back button is always available.
 /// Also initializes ScreenUtil so responsive `.sp`/`.w`/`.h` extensions work.
+/// Uses [GetMaterialApp] so GetX services (e.g. [GlassSnackbar]'s
+/// `Get.rawSnackbar`) have a configured overlay — mirroring the real app.
 Widget buildTestApp(Widget child) {
   return ScreenUtilInit(
     designSize: const Size(360, 690),
     minTextAdapt: true,
     splitScreenMode: true,
-    builder: (context, _) => MaterialApp(
+    builder: (context, _) => GetMaterialApp(
       locale: const Locale('ar'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

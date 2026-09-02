@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -12,14 +13,17 @@ import 'core/services/biometric_service.dart';
 import 'core/services/locale_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
-import 'data/repositories/note_repository.dart';
+import 'features/notes/domain/repositories/note_repository.dart';
+import 'features/notes/data/repositories_impl/note_repository.dart';
 import 'l10n/generated/app_localizations.dart';
-import 'features/notes/cubit/home_cubit.dart';
-import 'features/notes/view/home_screen.dart';
-import 'features/auth/view/lock_screen.dart';
-import 'features/onboarding/view/onboarding_screen.dart';
-import 'core/services/ui_prefs.dart';
-import 'features/auth/view/lock_setup_screen.dart';
+import 'features/notes/presentation/cubits/home_cubit.dart';
+import 'features/shell/presentation/screens/main_shell.dart';
+import 'features/auth/presentation/screens/lock_screen.dart';
+import 'features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'features/onboarding/data/repositories_impl/onboarding_repository.dart';
+import 'features/onboarding/domain/repositories/onboarding_repository.dart';
+import 'features/onboarding/domain/usecases/load_onboarding_status.dart';
+import 'features/auth/presentation/screens/lock_setup_screen.dart';
 
 class NoteyApp extends StatelessWidget {
   const NoteyApp({
@@ -28,6 +32,7 @@ class NoteyApp extends StatelessWidget {
     this.biometricService,
     this.lockController,
     this.secureStorage,
+    this.onboardingRepository,
   });
 
   /// Injectable for tests.
@@ -41,6 +46,9 @@ class NoteyApp extends StatelessWidget {
 
   /// Injectable for tests.
   final FlutterSecureStorage? secureStorage;
+
+  /// Injectable for tests; defaults to the SharedPreferences-backed repo.
+  final OnboardingRepository? onboardingRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +70,7 @@ class NoteyApp extends StatelessWidget {
               minTextAdapt: true,
               splitScreenMode: true,
               builder: (context, child) {
-                return MaterialApp(
+                return GetMaterialApp(
                   title: 'Notey',
                   debugShowCheckedModeBanner: false,
                   locale: locale,
@@ -108,6 +116,7 @@ class NoteyApp extends StatelessWidget {
                     repository: repository,
                     biometricService: biometricService,
                     lockController: lockController,
+                    onboardingRepository: onboardingRepository,
                   ),
                 );
               },
@@ -130,17 +139,22 @@ class BootstrapScreen extends StatefulWidget {
     required this.repository,
     required this.biometricService,
     required this.lockController,
+    this.onboardingRepository,
   });
 
   final NoteRepository? repository;
   final BiometricService biometricService;
   final AppLockController lockController;
+  final OnboardingRepository? onboardingRepository;
 
   @override
   State<BootstrapScreen> createState() => _BootstrapScreenState();
 }
 
 class _BootstrapScreenState extends State<BootstrapScreen> {
+  late final OnboardingRepository _onboarding =
+      widget.onboardingRepository ?? OnboardingRepositoryImpl();
+
   /// Only shows onboarding when prefs PROVE it wasn't completed; defaults to
   /// opening the app instantly (no splash waiting on disk reads).
   bool? _showOnboarding;
@@ -165,7 +179,7 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
       }
       setState(() => _startupFallback = true);
     });
-    UiPrefs.isOnboardingDone().then((bool done) {
+    LoadOnboardingStatus(_onboarding)().then((bool done) {
       if (mounted && !done) setState(() => _showOnboarding = true);
     });
   }
@@ -201,9 +215,9 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
         final method = controller.method ?? AppLockMethod.none;
         if (method == AppLockMethod.none) {
           return BlocProvider<HomeCubit>(
-            create: (_) => HomeCubit(widget.repository ?? NoteRepository()),
-            child: HomeScreen(
-              repository: widget.repository,
+            create: (_) => HomeCubit(widget.repository ?? NoteRepositoryImpl()),
+            child: MainShell(
+              repository: widget.repository ?? NoteRepositoryImpl(),
               lockController: controller,
               biometricService: widget.biometricService,
             ),
@@ -229,7 +243,10 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
     final method = controller.method;
     if (method == null) {
       if (_showOnboarding == true) {
-        return OnboardingScreen(onDone: _completeOnboarding);
+        return OnboardingScreen(
+          onDone: _completeOnboarding,
+          repository: _onboarding,
+        );
       }
       return _LifecycleRelocker(
         controller: controller,
@@ -243,9 +260,9 @@ class _BootstrapScreenState extends State<BootstrapScreen> {
     }
     if (method == AppLockMethod.none) {
       return BlocProvider<HomeCubit>(
-        create: (_) => HomeCubit(widget.repository ?? NoteRepository()),
-        child: HomeScreen(
-          repository: widget.repository,
+        create: (_) => HomeCubit(widget.repository ?? NoteRepositoryImpl()),
+        child: MainShell(
+          repository: widget.repository ?? NoteRepositoryImpl(),
           lockController: controller,
           biometricService: widget.biometricService,
         ),

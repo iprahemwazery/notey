@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notey/core/services/app_lock_controller.dart';
 import 'package:notey/core/services/biometric_service.dart';
-import 'package:notey/features/auth/cubit/auth_cubit.dart';
-import 'package:notey/features/auth/cubit/auth_state.dart';
+import 'package:notey/features/auth/presentation/cubits/auth_cubit.dart';
+import 'package:notey/features/auth/presentation/cubits/auth_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:notey/core/services/reminder_service.dart';
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

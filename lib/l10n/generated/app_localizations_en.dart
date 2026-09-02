@@ -636,6 +636,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get navHome => 'Home';
+
+  @override
   String get sectionSecurity => 'Lock & security';
 
   @override
@@ -1319,4 +1322,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get replayPreview => 'Preview';
+
+  @override
+  String get pressBackAgainToExit => 'Press back again to exit';
 }

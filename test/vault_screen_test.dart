@@ -3,11 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/secure_vault_repository.dart';
+import 'package:notey/features/vault/data/repositories_impl/secure_vault_repository.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
-import 'package:notey/features/vault/model/vault_entry.dart';
-import 'package:notey/features/vault/view/vault_entry_editor_screen.dart';
-import 'package:notey/features/vault/view/vault_screen.dart';
+import 'package:notey/features/vault/domain/entities/vault_entry.dart';
+import 'package:notey/features/vault/presentation/screens/vault_entry_editor_screen.dart';
+import 'package:notey/features/vault/presentation/screens/vault_screen.dart';
 
 /// In-memory repository stub — keeps the widget tests off the real sqflite
 /// ffi I/O, which never completes under the widget-tester's FakeAsync zone.

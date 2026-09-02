@@ -279,6 +279,7 @@
   "useBackupPin": "استخدام الرقم السري الاحتياطي",
   "biometricBackupHint": "استخدم بصمتك للفتح، أو استخدم الرقم السري الاحتياطي",
   "settingsTitle": "الإعدادات",
+  "navHome": "الرئيسية",
   "sectionSecurity": "القفل والتأمين",
   "lockMethodTile": "طريقة قفل التطبيق",
   "lockMethodUnset": "غير محددة",
@@ -615,5 +616,6 @@
   "audioUnavailable": "تعذر تشغيل الصوت",
   "reRecord": "إعادة التسجيل",
   "attach": "إرفاق",
-  "replayPreview": "معاينة"
+  "replayPreview": "معاينة",
+  "pressBackAgainToExit": "اضغط رجوع مرة أخرى للخروج"
 }

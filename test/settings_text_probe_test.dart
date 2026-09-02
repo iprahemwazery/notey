@@ -5,8 +5,8 @@ import 'package:notey/core/services/app_lock_controller.dart';
 import 'package:notey/core/services/biometric_service.dart';
 import 'package:notey/core/theme/app_theme.dart';
 import 'package:notey/data/database/note_database.dart';
-import 'package:notey/data/repositories/note_repository.dart';
-import 'package:notey/features/settings/view/settings_screen.dart';
+import 'package:notey/features/notes/data/repositories_impl/note_repository.dart';
+import 'package:notey/features/settings/presentation/screens/settings_screen.dart';
 import 'package:notey/l10n/generated/app_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -38,7 +38,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: SettingsScreen(
-              repository: NoteRepository(database: NoteDatabase(inMemory: true)),
+              repository: NoteRepositoryImpl(database: NoteDatabase(inMemory: true)),
               lockController: AppLockController(secureStorage: _FakeStorage()),
               biometricService: _AutoBio(),
             ),

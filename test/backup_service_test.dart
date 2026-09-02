@@ -6,7 +6,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:notey/core/services/backup_service.dart';
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
+import 'package:notey/features/notes/data/models/note_model.dart';
 
 class _FakePathProvider extends PathProviderPlatform {
   _FakePathProvider(this.root);
@@ -91,11 +92,11 @@ void main() {
         'version': 1,
         'exportedAt': DateTime.now().toIso8601String(),
         'notes': <Object?>[
-          Note.create(
+          NoteModel.toMap(Note.create(
             title: 'قديمة',
             content: '',
             attachments: <String>['/old/device/img.jpg'],
-          ).toMap(),
+          )),
         ],
       }));
 

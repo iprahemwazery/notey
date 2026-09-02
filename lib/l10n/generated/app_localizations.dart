@@ -1190,6 +1190,12 @@ abstract class AppLocalizations {
   /// **'الإعدادات'**
   String get settingsTitle;
 
+  /// No description provided for @navHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get navHome;
+
   /// No description provided for @sectionSecurity.
   ///
   /// In ar, this message translates to:
@@ -2413,6 +2419,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'معاينة'**
   String get replayPreview;
+
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط رجوع مرة أخرى للخروج'**
+  String get pressBackAgainToExit;
 }
 
 class _AppLocalizationsDelegate

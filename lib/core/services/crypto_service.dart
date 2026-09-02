@@ -52,11 +52,10 @@ abstract final class CryptoService {
     required String plain,
     required String password,
     required String salt,
+    SecretKey? preKey,
   }) async {
-    final iterations = pbkdf2Iterations < minIterations
-        ? minIterations
-        : pbkdf2Iterations;
-    final key = await _deriveKey(password, salt, iterations);
+    final iterations = effectiveIterations;
+    final key = preKey ?? await _deriveKey(password, salt, iterations);
     final box = await AesGcm.with256bits().encrypt(
       utf8.encode(plain),
       secretKey: key,
@@ -135,6 +134,22 @@ abstract final class CryptoService {
   }
 
   static String newSalt() => base64Encode(_randomBytes(16));
+
+  /// Iteration count used for fresh encryptions, floored by [minIterations].
+  static int get effectiveIterations =>
+      pbkdf2Iterations < minIterations ? minIterations : pbkdf2Iterations;
+
+  /// Derives the key for a fresh encryption with a new salt. PBKDF2 is the
+  /// dominant cost of any encrypt/decrypt, so callers (e.g. [NoteLockService])
+  /// derive ONCE and pass the key back via [encryptField]'s `preKey` for every
+  /// field sharing the same (password, salt) — a lock then runs a single KDF
+  /// instead of one per field.
+  static Future<SecretKey> deriveKeyForEncryption({
+    required String password,
+    required String salt,
+  }) async {
+    return _deriveKeyCached(password, salt, effectiveIterations);
+  }
 
   /// Runs PBKDF2-SHA256 and returns the derived key bytes.
   ///

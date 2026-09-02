@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:notey/features/notes/view/note_view_screen.dart';
+import 'package:notey/features/notes/presentation/screens/note_view_screen.dart';
 
 import 'helpers.dart';
 
@@ -57,6 +57,11 @@ void main() {
       expect(persisted?.isLocked, isTrue);
       expect(persisted?.title, isNot('سري'));
       expect(persisted?.content, isNot('محتوى سري'));
+
+      // Let the GlassSnackbar's auto-dismiss timer elapse so the test teardown
+      // doesn't trip the "Timer is still pending" invariant.
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
     });
   });
 }

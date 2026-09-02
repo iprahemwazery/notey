@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:notey/features/notes/presentation/screens/home_screen.dart';
+
 import 'helpers.dart';
+
+Finder _inHome(Finder matching) =>
+    find.descendant(of: find.byType(HomeScreen), matching: matching);
 
 void main() {
   setUp(() => setUpCommon());
@@ -263,10 +268,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.tap(_inHome(find.byIcon(Icons.settings_outlined)));
       await tester.pumpAndSettle();
 
-      expect(find.text('الإعدادات'), findsOneWidget);
+      expect(find.text('الإعدادات'), findsWidgets);
     });
 
     testWidgets('trash icon is visible in header',
@@ -276,7 +281,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+      expect(_inHome(find.byIcon(Icons.delete_outline_rounded)), findsOneWidget);
     });
 
     testWidgets('no notes shows single note count',
@@ -305,7 +310,7 @@ void main() {
       // Selection bar appears at the bottom with palette, pin, delete icons
       expect(find.byIcon(Icons.palette_outlined), findsOneWidget);
       expect(find.byIcon(Icons.push_pin_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+      expect(_inHome(find.byIcon(Icons.delete_outline_rounded)), findsOneWidget);
     });
   });
 }

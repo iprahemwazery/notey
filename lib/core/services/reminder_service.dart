@@ -9,7 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'package:notey/core/constants/app_constants.dart';
 
-import 'package:notey/features/notes/model/note.dart';
+import 'package:notey/features/notes/domain/entities/note.dart';
 
 
 /// Result of scheduling a reminder.
