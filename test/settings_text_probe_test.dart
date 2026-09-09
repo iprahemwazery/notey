@@ -21,8 +21,6 @@ class _FakeStorage extends FlutterSecureStorage {
 }
 
 void main() {
-  bool noMatch = false;
-  Finder _text(String s) => find.byWidgetPredicate((w) => w is Text && w.data == s);
   for (final mode in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {
     testWidgets('settings text color $mode', (tester) async {
       await tester.pumpWidget(
@@ -53,7 +51,7 @@ void main() {
         final e = f.evaluate().first;
         final style = (e.widget as Text).style;
         // ignore: avoid_print
-        print('[$mode] "$target" explicitStyle=${style}');
+        print('[$mode] "$target" explicitStyle=$style');
       } else {
         // ignore: avoid_print
         print('[$mode] text not found');

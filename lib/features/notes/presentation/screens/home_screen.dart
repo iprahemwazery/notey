@@ -535,8 +535,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<bool?> _confirmSwipe(DismissDirection direction, Note note) {
-    if (direction == DismissDirection.endToStart) return _confirmDelete();
-    return Future.value(true);
+    if (direction == DismissDirection.startToEnd) {
+      // Pin is not a destructive action: toggle it in place and snap the
+      // card back instead of dismissing it. Dismissible must always be
+      // removed from the tree after onDismissed, which a pin toggle can't
+      // guarantee, so we never let the swipe complete here.
+      _pinNoteSwipe(note);
+      return Future.value(false);
+    }
+    return _confirmDelete();
   }
 
   Future<void> _reorder(int oldIndex, int newIndex) async {
